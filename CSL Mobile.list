@@ -1,0 +1,48 @@
+# ==============================
+# 香港 CSL / HKT 全品牌规则
+# 母公司：PCCW → HKT → CSL Mobile
+# 现有品牌：csl / 1O1O / Club SIM / SUN Mobile / 7-Connect
+# 相关：Netvigator / Now TV / PCCW
+# ==============================
+
+# ----- 母公司 PCCW -----
+DOMAIN-SUFFIX,pccw.com
+DOMAIN-SUFFIX,pccwglobal.com
+
+# ----- HKT 香港电讯 -----
+DOMAIN-SUFFIX,hkt.com
+DOMAIN-SUFFIX,myhkt.com
+DOMAIN-SUFFIX,hktmedia.com
+
+# ----- CSL 主品牌 -----
+DOMAIN-SUFFIX,hkcsl.com
+DOMAIN-SUFFIX,csl.com.hk
+
+# ----- 1O1O 高端品牌 -----
+DOMAIN-SUFFIX,1010.com.hk
+
+# ----- Club SIM 年轻品牌 -----
+DOMAIN-SUFFIX,clubsim.com.hk
+DOMAIN-SUFFIX,clubsim.hk
+
+# ----- SUN Mobile -----
+DOMAIN-SUFFIX,sunmobile.com.hk
+DOMAIN-SUFFIX,sun-mobile.com.hk
+
+# ----- 7-Connect（与7-Eleven合营）-----
+DOMAIN-SUFFIX,7connect.com.hk
+
+# ----- Netvigator 宽带 -----
+DOMAIN-SUFFIX,netvigator.com
+
+# ----- Now TV / Viu TV 媒体 -----
+DOMAIN-SUFFIX,nowtv.now.com
+DOMAIN-SUFFIX,now.com
+DOMAIN-SUFFIX,nowe.com
+
+# ----- Console Connect 企业互联 -----
+DOMAIN-SUFFIX,consoleconnect.com
+
+# ----- API / App 后端通用域名 -----
+DOMAIN-SUFFIX,hktnow.com
+DOMAIN-SUFFIX,smartliving.hkt.com

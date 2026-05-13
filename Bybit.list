@@ -1,0 +1,18 @@
+# Bybit 分流规则
+# 主站
+DOMAIN-SUFFIX,bybit.com
+DOMAIN-SUFFIX,bybit.nl
+DOMAIN-SUFFIX,bybit-tr.com
+DOMAIN-SUFFIX,bybit.kz
+
+# API 接口
+DOMAIN-SUFFIX,bytick.com
+
+# 静态资源 / CDN
+DOMAIN-SUFFIX,bybitimg.com
+DOMAIN-SUFFIX,bybitmedia.com
+
+# WebSocket 流
+DOMAIN,stream.bybit.com
+DOMAIN,stream.bybit-tr.com
+DOMAIN,stream.bybit.kz

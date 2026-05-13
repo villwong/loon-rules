@@ -1,0 +1,49 @@
+# ==============================
+# IP 查询 / 质量检测网站规则
+# ==============================
+
+# ----- 综合IP信息显示 -----
+DOMAIN-SUFFIX,ping0.cc
+DOMAIN-SUFFIX,ip.skk.moe
+DOMAIN-SUFFIX,ipinfo.io
+DOMAIN-SUFFIX,ip234.in
+DOMAIN-SUFFIX,ipcheck.ing
+DOMAIN-SUFFIX,myip.la
+DOMAIN-SUFFIX,ip.sb
+DOMAIN-SUFFIX,ip-api.com
+DOMAIN-SUFFIX,ipapi.co
+DOMAIN-SUFFIX,ipapi.is
+DOMAIN-SUFFIX,ipleak.net
+DOMAIN-SUFFIX,ip.check.place
+DOMAIN-SUFFIX,ippure.com
+
+# ----- IP质量 / 风控检测 -----
+DOMAIN-SUFFIX,ipqualityscore.com
+DOMAIN-SUFFIX,scamalytics.com
+DOMAIN-SUFFIX,abuseipdb.com
+DOMAIN-SUFFIX,ipdata.co
+DOMAIN-SUFFIX,ipregistry.co
+DOMAIN-SUFFIX,spamhaus.org
+DOMAIN-SUFFIX,whoer.net
+DOMAIN-SUFFIX,ipjiance.com
+
+# ----- 地理位置 / ASN数据库 -----
+DOMAIN-SUFFIX,ip2location.com
+DOMAIN-SUFFIX,ip2location.io
+DOMAIN-SUFFIX,ipip.net
+DOMAIN-SUFFIX,db-ip.com
+DOMAIN-SUFFIX,maxmind.com
+
+# ----- 传统whatismyip类 -----
+DOMAIN-SUFFIX,whatismyip.com
+DOMAIN-SUFFIX,whatismyipaddress.com
+DOMAIN-SUFFIX,icanhazip.com
+DOMAIN-SUFFIX,ifconfig.me
+DOMAIN-SUFFIX,ipecho.net
+DOMAIN-SUFFIX,checkip.amazonaws.com
+
+# ----- DNS泄漏 / 浏览器指纹检测 -----
+DOMAIN-SUFFIX,browserleaks.com
+DOMAIN-SUFFIX,dnsleaktest.com
+DOMAIN-SUFFIX,dnsleak.com
+DOMAIN-SUFFIX,mullvad.net
