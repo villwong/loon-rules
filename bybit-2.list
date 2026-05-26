@@ -1,0 +1,36 @@
+#!name = Bybit 分流规则
+#!desc = Bybit 相关域名分流规则，策略组可自行修改
+#!author = Custom
+#!date = 2026-05-26
+
+[Rule]
+# ========== Bybit 主站 ==========
+DOMAIN-SUFFIX,bybit.com
+DOMAIN-SUFFIX,bybit.nl
+DOMAIN-SUFFIX,bybit-tr.com
+DOMAIN-SUFFIX,bybit.kz
+DOMAIN-SUFFIX,bybit.biz
+
+# ========== Bybit API 接口 ==========
+DOMAIN-SUFFIX,bytick.com
+DOMAIN-SUFFIX,bybdc6.com
+DOMAIN-SUFFIX,byd3c3.com
+DOMAIN-SUFFIX,byabcde.com
+
+# ========== Bybit 静态资源 / CDN ==========
+DOMAIN-SUFFIX,bybitimg.com
+DOMAIN-SUFFIX,bybitmedia.com
+DOMAIN-SUFFIX,bycsi.com
+
+# ========== Bybit WebSocket 流 ==========
+DOMAIN,stream.bybit.com
+DOMAIN,stream.bybit-tr.com
+DOMAIN,stream.bybit.kz
+
+# ========== 关键词兜底（可选，按需启用）==========
+# DOMAIN-KEYWORD,bybit
+# DOMAIN-KEYWORD,byabcde
+# DOMAIN-KEYWORD,bybdc
+# DOMAIN-KEYWORD,byd3c
+# DOMAIN-KEYWORD,bycsi
+# DOMAIN-KEYWORD,bytick
