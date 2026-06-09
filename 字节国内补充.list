@@ -1,0 +1,25 @@
+# 字节跳动 国内服务 · 补充（bm7 ByteDance.list 未收录）
+
+# snssdk 系：抖音/头条核心，bm7 误归到 TikTok，国内必须直连
+DOMAIN-SUFFIX,snssdk.com
+DOMAIN-SUFFIX,ibytedtos.com
+
+# CDN / 存储补充
+DOMAIN-SUFFIX,bytedtos.com
+DOMAIN-SUFFIX,bytegoocdn.com
+DOMAIN-SUFFIX,bytegimg.com
+DOMAIN-SUFFIX,byteacl.com
+
+# 番茄小说主域
+DOMAIN-SUFFIX,fanqienovel.com
+# 汽水音乐
+DOMAIN-SUFFIX,qishui.com
+# 剪映国内 / CapCut 国内版
+DOMAIN-SUFFIX,jianying.com
+DOMAIN-SUFFIX,capcut.cn
+# 皮皮虾
+DOMAIN-SUFFIX,pipixia.com
+# 飞书统一域
+DOMAIN-SUFFIX,larkoffice.com
+# 图虫
+DOMAIN-SUFFIX,tuchong.com
