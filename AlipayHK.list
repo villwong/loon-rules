@@ -1,0 +1,9 @@
+# UpdateTime: 2026-08-05 22:51:36
+# RuleCount: 7
+DOMAIN, myh2hk.alipay.com
+DOMAIN, gw.alipayobjects.com
+DOMAIN, mdn.alipayobjects.com
+DOMAIN, cdn.marmot-cloud.com
+DOMAIN, api-mayi.django.t.taobao.com
+DOMAIN, imgs.alipay.hk
+IP-CIDR6, 2000::/128, no-resolve
