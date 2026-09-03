@@ -1,0 +1,49 @@
+name: Update YouTube Loon Rules
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-youtube-loon-rules
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run updater tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Update YouTube rules
+        run: python scripts/update_youtube_rules.py
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          git add rule/YouTube.list
+          if git diff --cached --quiet; then
+            echo "YouTube rules are already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: update YouTube rules"
+          git push
