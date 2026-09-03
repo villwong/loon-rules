@@ -167,6 +167,222 @@
           "min_rules": 20
         }
       ]
+    },
+    {
+      "name": "Bybit",
+      "output": "rule/Bybit.list",
+      "header": "自动合并自 v2fly",
+      "sources": [
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/bybit",
+          "format": "v2fly-domain-list",
+          "min_rules": 10
+        }
+      ]
+    },
+    {
+      "name": "Wise",
+      "output": "rule/Wise.list",
+      "header": "自动合并自 v2fly",
+      "sources": [
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/wise",
+          "format": "v2fly-domain-list",
+          "min_rules": 2
+        }
+      ]
+    },
+    {
+      "name": "OKX",
+      "output": "rule/OKX.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/OKX/OKX.list",
+          "format": "loon-list",
+          "min_rules": 3
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/okx",
+          "format": "v2fly-domain-list",
+          "min_rules": 8
+        }
+      ]
+    },
+    {
+      "name": "Binance",
+      "output": "rule/Binance.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Binance/Binance.list",
+          "format": "loon-list",
+          "min_rules": 10
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/binance",
+          "format": "v2fly-domain-list",
+          "min_rules": 40
+        }
+      ]
+    },
+    {
+      "name": "Reddit",
+      "output": "rule/Reddit.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Reddit/Reddit.list",
+          "format": "loon-list",
+          "min_rules": 5
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/reddit",
+          "format": "v2fly-domain-list",
+          "min_rules": 10
+        }
+      ]
+    },
+    {
+      "name": "PayPal",
+      "output": "rule/PayPal.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/PayPal/PayPal.list",
+          "format": "loon-list",
+          "min_rules": 200
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/paypal",
+          "format": "v2fly-domain-list",
+          "min_rules": 200
+        }
+      ]
+    },
+    {
+      "name": "eBay",
+      "output": "rule/eBay.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/eBay/eBay.list",
+          "format": "loon-list",
+          "min_rules": 40
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/ebay",
+          "format": "v2fly-domain-list",
+          "min_rules": 300
+        }
+      ]
+    },
+    {
+      "name": "Twitter",
+      "output": "rule/Twitter.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Twitter/Twitter.list",
+          "format": "loon-list",
+          "min_rules": 25
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/twitter",
+          "format": "v2fly-domain-list",
+          "min_rules": 20
+        }
+      ]
+    },
+    {
+      "name": "Instagram",
+      "output": "rule/Instagram.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Instagram/Instagram.list",
+          "format": "loon-list",
+          "min_rules": 3
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/instagram",
+          "format": "v2fly-domain-list",
+          "min_rules": 60
+        }
+      ]
+    },
+    {
+      "name": "GitHub",
+      "output": "rule/GitHub.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/GitHub/GitHub.list",
+          "format": "loon-list",
+          "min_rules": 25
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/github",
+          "format": "v2fly-domain-list",
+          "min_rules": 50
+        }
+      ]
+    },
+    {
+      "name": "Telegram",
+      "output": "rule/Telegram.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Telegram/Telegram.list",
+          "format": "loon-list",
+          "min_rules": 30
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/telegram",
+          "format": "v2fly-domain-list",
+          "min_rules": 15
+        }
+      ]
+    },
+    {
+      "name": "Microsoft",
+      "output": "rule/Microsoft.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Microsoft/Microsoft.list",
+          "format": "loon-list",
+          "min_rules": 600
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/microsoft",
+          "format": "v2fly-domain-list",
+          "min_rules": 650
+        }
+      ]
     }
   ]
 }

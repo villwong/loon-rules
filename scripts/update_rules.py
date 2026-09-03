@@ -53,6 +53,7 @@ class V2flyEntry:
     type_name: str
     value: str
     attributes: tuple[str, ...] = ()
+    source_categories: tuple[str, ...] = ()
 
     @property
     def key(self) -> tuple[str, str, tuple[str, ...]]:
@@ -228,11 +229,30 @@ def matches_v2fly_include(entry: V2flyEntry, inclusion: V2flyInclude) -> bool:
     return not set(inclusion.banned_attributes).intersection(attributes)
 
 
+def merge_v2fly_entry_sources(
+    existing: V2flyEntry | None, entry: V2flyEntry
+) -> V2flyEntry:
+    """Merge provenance without changing the semantic v2fly entry key."""
+    if existing is None:
+        return entry
+    source_categories = tuple(
+        dict.fromkeys((*existing.source_categories, *entry.source_categories))
+    )
+    return V2flyEntry(
+        entry.type_name,
+        entry.value,
+        entry.attributes,
+        source_categories,
+    )
+
+
 def polish_v2fly_entries(entries: Iterable[V2flyEntry]) -> list[V2flyEntry]:
     """Apply v2fly's parent-domain pruning while attributes are still present."""
-    rough_entries: dict[tuple[str, str, tuple[str, ...]], V2flyEntry] = {
-        entry.key: entry for entry in entries
-    }
+    rough_entries: dict[tuple[str, str, tuple[str, ...]], V2flyEntry] = {}
+    for entry in entries:
+        rough_entries[entry.key] = merge_v2fly_entry_sources(
+            rough_entries.get(entry.key), entry
+        )
     parents: set[str] = set()
 
     for entry in rough_entries.values():
@@ -297,6 +317,9 @@ def expand_v2fly_entries(
             downloads[url] = fetcher(url)
 
         entries: dict[tuple[str, str, tuple[str, ...]], V2flyEntry] = {}
+        source_category = urllib.parse.unquote(
+            urllib.parse.urlsplit(url).path.rsplit("/", 1)[-1]
+        ).casefold()
         next_active = (*active_urls, url)
         for raw_line in downloads[url].splitlines():
             entry = parse_v2fly_entry(raw_line)
@@ -308,9 +331,19 @@ def expand_v2fly_entries(
                 include_url = resolve_v2fly_include_url(url, entry.name)
                 for included_entry in visit(include_url, next_active):
                     if matches_v2fly_include(included_entry, entry):
-                        entries[included_entry.key] = included_entry
+                        entries[included_entry.key] = merge_v2fly_entry_sources(
+                            entries.get(included_entry.key), included_entry
+                        )
             else:
-                entries[entry.key] = entry
+                sourced_entry = V2flyEntry(
+                    entry.type_name,
+                    entry.value,
+                    entry.attributes,
+                    (source_category,),
+                )
+                entries[entry.key] = merge_v2fly_entry_sources(
+                    entries.get(entry.key), sourced_entry
+                )
 
         expansions[cache_key] = tuple(entries.values())
         return expansions[cache_key]

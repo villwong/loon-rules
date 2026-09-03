@@ -82,6 +82,12 @@ class RuleUpdaterTests(unittest.TestCase):
         )
         self.assertFalse(any("@" in rule for rule in rules))
 
+        expanded = updater.expand_v2fly_entries(root_url, responses.__getitem__)
+        sources_by_value = {entry.value: entry.source_categories for entry in expanded}
+        self.assertEqual(sources_by_value["root.example"], ("root", "child"))
+        self.assertEqual(sources_by_value["child.example"], ("child",))
+        self.assertEqual(sources_by_value["nested"], ("grandchild",))
+
     def test_v2fly_include_attribute_filters(self) -> None:
         root_url = "https://example.test/data/root"
         responses = {
@@ -702,9 +708,10 @@ class RuleUpdaterTests(unittest.TestCase):
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
         services_by_name = {service.name: service for service in services}
 
-        self.assertEqual(
-            set(services_by_name),
-            {"YouTube", "Google", "Gemini", "Anthropic", "OpenAI"},
+        self.assertTrue(
+            {"YouTube", "Google", "Gemini", "Anthropic", "OpenAI"}.issubset(
+                services_by_name
+            )
         )
         self.assertEqual(
             services_by_name["Gemini"].output, Path("rule/Gemini.list")
@@ -741,6 +748,226 @@ class RuleUpdaterTests(unittest.TestCase):
         )
         self.assertNotIn("Claude", services_by_name)
         self.assertNotIn("ChatGPT", services_by_name)
+
+    def test_repository_config_defines_only_dedicated_requested_sources(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        services_by_name = {service.name: service for service in services}
+        expected_sources = {
+            "Bybit": ("bybit", None),
+            "Wise": ("wise", None),
+            "OKX": ("okx", "OKX"),
+            "Binance": ("binance", "Binance"),
+            "Reddit": ("reddit", "Reddit"),
+            "PayPal": ("paypal", "PayPal"),
+            "eBay": ("ebay", "eBay"),
+            "Twitter": ("twitter", "Twitter"),
+            "Instagram": ("instagram", "Instagram"),
+            "GitHub": ("github", "GitHub"),
+            "Telegram": ("telegram", "Telegram"),
+            "Microsoft": ("microsoft", "Microsoft"),
+        }
+
+        self.assertEqual(
+            set(services_by_name),
+            {
+                "YouTube",
+                "Google",
+                "Gemini",
+                "Anthropic",
+                "OpenAI",
+                *expected_sources,
+            },
+        )
+        for name, (v2fly_category, blackmatrix_name) in expected_sources.items():
+            with self.subTest(service=name):
+                service = services_by_name[name]
+                self.assertEqual(service.output, Path(f"rule/{name}.list"))
+                self.assertTrue(
+                    service.sources[-1].url.endswith(f"/data/{v2fly_category}")
+                )
+                if blackmatrix_name is None:
+                    self.assertEqual(len(service.sources), 1)
+                else:
+                    self.assertEqual(len(service.sources), 2)
+                    self.assertIn(
+                        f"/rule/Loon/{blackmatrix_name}/{blackmatrix_name}.list",
+                        service.sources[0].url,
+                    )
+                    self.assertNotIn("_Resolve.list", service.sources[0].url)
+
+                source_urls = [source.url.casefold() for source in service.sources]
+                self.assertFalse(
+                    any(
+                        marker in url
+                        for marker in (
+                            "/global/",
+                            "/globalmedia/",
+                            "/proxy/",
+                            "/crypto/",
+                            "/social/",
+                            "category-",
+                        )
+                        for url in source_urls
+                    )
+                )
+
+        self.assertNotIn("AlipayHK", services_by_name)
+        self.assertFalse((updater.REPOSITORY_ROOT / "rule/AlipayHK.list").exists())
+        self.assertFalse(
+            any(
+                marker in source.url.casefold()
+                for service in services
+                for source in service.sources
+                for marker in ("/data/alipay", "/data/alibaba", "/data/ant-group")
+            )
+        )
+
+    def test_requested_services_preserve_every_configured_source_rule(self) -> None:
+        service_names = (
+            "Bybit",
+            "Wise",
+            "OKX",
+            "Binance",
+            "Reddit",
+            "PayPal",
+            "eBay",
+            "Twitter",
+            "Instagram",
+            "GitHub",
+            "Telegram",
+            "Microsoft",
+        )
+        v2fly_only = {"Bybit", "Wise"}
+        responses: dict[str, str] = {}
+        services: list[updater.ServiceConfig] = []
+        expected_by_service: dict[str, set[str]] = {}
+
+        for index, name in enumerate(service_names, start=1):
+            category = name.casefold()
+            v2fly_url = f"https://example.test/data/{category}"
+            child_url = f"https://example.test/data/{category}-child"
+            responses[v2fly_url] = (
+                f"domain:{category}.example @cn\ninclude:{category}-child"
+            )
+            responses[child_url] = f"full:api.{category}-exact.example @ads"
+            sources: list[updater.SourceConfig] = []
+            expected = {
+                f"DOMAIN-SUFFIX,{category}.example",
+                f"DOMAIN,api.{category}-exact.example",
+            }
+
+            if name not in v2fly_only:
+                blackmatrix_url = f"https://example.test/loon/{category}.list"
+                responses[blackmatrix_url] = (
+                    f"DOMAIN-SUFFIX,{category}.bm.example\n"
+                    f"IP-CIDR,192.0.2.{index}/32,no-resolve"
+                )
+                sources.append(
+                    updater.SourceConfig(
+                        "Blackmatrix7",
+                        blackmatrix_url,
+                        "loon-list",
+                        1,
+                        tuple(sorted(updater.SUPPORTED_LOON_TYPES)),
+                    )
+                )
+                expected.update(
+                    {
+                        f"DOMAIN-SUFFIX,{category}.bm.example",
+                        f"IP-CIDR,192.0.2.{index}/32,no-resolve",
+                    }
+                )
+
+            sources.append(
+                updater.SourceConfig("v2fly", v2fly_url, "v2fly-domain-list", 1)
+            )
+            services.append(
+                updater.ServiceConfig(
+                    name,
+                    Path(f"rule/{name}.list"),
+                    f"自动生成 {name}",
+                    tuple(sources),
+                )
+            )
+            expected_by_service[name] = expected
+
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = updater.prepare_services(
+                services,
+                Path(directory),
+                responses.__getitem__,
+            )
+
+        self.assertEqual(len(prepared), len(service_names))
+        for item in prepared:
+            with self.subTest(service=item.service.name):
+                self.assertEqual(
+                    expected_by_service[item.service.name] - set(item.rules), set()
+                )
+
+    def test_generated_requested_rules_are_valid_and_contain_core_domains(self) -> None:
+        required_rules = {
+            "Bybit": {"DOMAIN-SUFFIX,bybit.com"},
+            "Wise": {
+                "DOMAIN-SUFFIX,transferwise.com",
+                "DOMAIN-SUFFIX,wise.com",
+            },
+            "OKX": {"DOMAIN-SUFFIX,okex.com"},
+            "Binance": {"DOMAIN-SUFFIX,binance.com"},
+            "Reddit": {
+                "DOMAIN-SUFFIX,reddit.com",
+                "DOMAIN-SUFFIX,redd.it",
+            },
+            "PayPal": {"DOMAIN-SUFFIX,paypal.com"},
+            "eBay": {"DOMAIN-SUFFIX,ebay.com"},
+            "Twitter": {
+                "DOMAIN-SUFFIX,twitter.com",
+                "DOMAIN-SUFFIX,x.com",
+            },
+            "Instagram": {"DOMAIN-SUFFIX,instagram.com"},
+            "GitHub": {
+                "DOMAIN-SUFFIX,github.com",
+                "DOMAIN-SUFFIX,githubusercontent.com",
+            },
+            "Telegram": {
+                "DOMAIN-SUFFIX,telegram.org",
+                "DOMAIN-SUFFIX,t.me",
+                "DOMAIN-SUFFIX,telegra.ph",
+            },
+            "Microsoft": {"DOMAIN-SUFFIX,microsoft.com"},
+        }
+
+        for name, required in required_rules.items():
+            with self.subTest(service=name):
+                output = updater.REPOSITORY_ROOT / "rule" / f"{name}.list"
+                self.assertTrue(output.is_file())
+                rules = [
+                    line.strip()
+                    for line in output.read_text(encoding="utf-8").splitlines()
+                    if line.strip() and not line.startswith("#")
+                ]
+                rule_set = set(rules)
+                self.assertEqual(required - rule_set, set())
+                self.assertEqual(len(rules), len({updater.rule_key(rule) for rule in rules}))
+                self.assertTrue(
+                    all(rule.split(",", 1)[0] in updater.SUPPORTED_LOON_TYPES for rule in rules)
+                )
+                self.assertFalse(
+                    any(
+                        token in rule
+                        for rule in rules
+                        for token in ("include:", "regexp:", " @", ":@")
+                    )
+                )
+                self.assertTrue(
+                    all(
+                        rule.endswith(",no-resolve")
+                        for rule in rules
+                        if rule.startswith(("IP-CIDR,", "IP-CIDR6,"))
+                    )
+                )
+
+        self.assertFalse((updater.REPOSITORY_ROOT / "rule/AlipayHK.list").exists())
 
     def test_google_merge_preserves_no_resolve_and_distinct_domain_types(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
