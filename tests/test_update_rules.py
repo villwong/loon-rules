@@ -227,14 +227,66 @@ class RuleUpdaterTests(unittest.TestCase):
 
     def test_repository_config_defines_youtube(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        services_by_name = {service.name: service for service in services}
+        youtube = services_by_name["YouTube"]
 
-        self.assertEqual(len(services), 1)
-        self.assertEqual(services[0].name, "YouTube")
-        self.assertEqual(services[0].output, Path("rule/YouTube.list"))
+        self.assertEqual(youtube.output, Path("rule/YouTube.list"))
         self.assertEqual(
-            [source.format_name for source in services[0].sources],
+            [source.format_name for source in youtube.sources],
             ["loon-list", "v2fly-domain-list"],
         )
+
+    def test_repository_config_defines_google_without_resolve_list(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        services_by_name = {service.name: service for service in services}
+        google = services_by_name["Google"]
+
+        self.assertEqual(google.output, Path("rule/Google.list"))
+        self.assertEqual(
+            [source.format_name for source in google.sources],
+            ["loon-list", "v2fly-domain-list"],
+        )
+        self.assertEqual(
+            set(google.sources[0].include_types),
+            updater.SUPPORTED_LOON_TYPES,
+        )
+        self.assertTrue(google.sources[0].url.endswith("/rule/Loon/Google/Google.list"))
+        self.assertTrue(google.sources[1].url.endswith("/data/google"))
+        self.assertNotIn("Google_Resolve.list", google.sources[0].url)
+
+    def test_google_merge_preserves_no_resolve_and_distinct_domain_types(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        google = next(service for service in services if service.name == "Google")
+        blackmatrix_rules = updater.parse_source(
+            google.sources[0],
+            """
+            DOMAIN,exact.google.example
+            DOMAIN-SUFFIX,exact.google.example
+            DOMAIN-KEYWORD,google
+            USER-AGENT,*GoogleApp*
+            IP-CIDR,192.0.2.0/24,no-resolve
+            IP-CIDR6,2001:db8::/32,no-resolve
+            """,
+        )
+        v2fly_rules = updater.parse_source(
+            google.sources[1],
+            """
+            domain:exact.google.example @cn
+            full:exact.google.example @!cn
+            keyword:google @ads
+            new-google.example @ads
+            """,
+        )
+
+        merged = updater.deduplicate([*blackmatrix_rules, *v2fly_rules])
+
+        self.assertEqual(merged.count("DOMAIN,exact.google.example"), 1)
+        self.assertEqual(merged.count("DOMAIN-SUFFIX,exact.google.example"), 1)
+        self.assertEqual(merged.count("DOMAIN-KEYWORD,google"), 1)
+        self.assertIn("DOMAIN-SUFFIX,new-google.example", merged)
+        self.assertIn("IP-CIDR,192.0.2.0/24,no-resolve", merged)
+        self.assertIn("IP-CIDR6,2001:db8::/32,no-resolve", merged)
+        self.assertFalse(any("@cn" in rule or "@ads" in rule for rule in merged))
 
     def test_rejects_output_outside_rule_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

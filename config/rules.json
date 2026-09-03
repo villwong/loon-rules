@@ -26,6 +26,33 @@
           "min_rules": 100
         }
       ]
+    },
+    {
+      "name": "Google",
+      "output": "rule/Google.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Google/Google.list",
+          "format": "loon-list",
+          "min_rules": 600,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "USER-AGENT",
+            "IP-CIDR",
+            "IP-CIDR6"
+          ]
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google",
+          "format": "v2fly-domain-list",
+          "min_rules": 500
+        }
+      ]
     }
   ]
 }
