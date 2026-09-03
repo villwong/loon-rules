@@ -31,6 +31,9 @@
       "name": "Google",
       "output": "rule/Google.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
+      "exclude_includes": [
+        "youtube"
+      ],
       "sources": [
         {
           "name": "Blackmatrix7",
@@ -50,7 +53,7 @@
           "name": "v2fly",
           "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google",
           "format": "v2fly-domain-list",
-          "min_rules": 900
+          "min_rules": 700
         }
       ]
     }

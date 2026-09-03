@@ -81,6 +81,7 @@ class ServiceConfig:
     output: Path
     header: str
     sources: tuple[SourceConfig, ...]
+    exclude_includes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -272,19 +273,24 @@ def expand_v2fly_entries(
     source_url: str,
     fetcher: Callable[[str], str],
     download_cache: dict[str, str] | None = None,
-    expansion_cache: dict[str, tuple[V2flyEntry, ...]] | None = None,
+    expansion_cache: dict[
+        tuple[str, frozenset[str]], tuple[V2flyEntry, ...]
+    ] | None = None,
+    exclude_includes: Iterable[str] = (),
 ) -> list[V2flyEntry]:
-    """Recursively resolve includes and return upstream-polished v2fly entries."""
+    """Recursively resolve allowed includes and return polished v2fly entries."""
     downloads = download_cache if download_cache is not None else {}
     expansions = expansion_cache if expansion_cache is not None else {}
+    excluded = frozenset(name.casefold() for name in exclude_includes)
 
     def visit(url: str, active_urls: tuple[str, ...]) -> tuple[V2flyEntry, ...]:
         if url in active_urls:
             cycle_start = active_urls.index(url)
             cycle = [*active_urls[cycle_start:], url]
             raise UpdateError(f"circular v2fly include: {' -> '.join(cycle)}")
-        if url in expansions:
-            return expansions[url]
+        cache_key = (url, excluded)
+        if cache_key in expansions:
+            return expansions[cache_key]
         if url not in downloads:
             downloads[url] = fetcher(url)
 
@@ -295,6 +301,8 @@ def expand_v2fly_entries(
             if entry is None:
                 continue
             if isinstance(entry, V2flyInclude):
+                if entry.name.casefold() in excluded:
+                    continue
                 include_url = resolve_v2fly_include_url(url, entry.name)
                 for included_entry in visit(include_url, next_active):
                     if matches_v2fly_include(included_entry, entry):
@@ -302,8 +310,8 @@ def expand_v2fly_entries(
             else:
                 entries[entry.key] = entry
 
-        expansions[url] = tuple(entries.values())
-        return expansions[url]
+        expansions[cache_key] = tuple(entries.values())
+        return expansions[cache_key]
 
     return polish_v2fly_entries(visit(source_url, ()))
 
@@ -312,14 +320,18 @@ def expand_v2fly_source(
     source_url: str,
     fetcher: Callable[[str], str],
     download_cache: dict[str, str] | None = None,
-    expansion_cache: dict[str, tuple[V2flyEntry, ...]] | None = None,
+    expansion_cache: dict[
+        tuple[str, frozenset[str]], tuple[V2flyEntry, ...]
+    ] | None = None,
+    exclude_includes: Iterable[str] = (),
 ) -> list[str]:
-    """Recursively expand, polish, convert, strip attributes, and deduplicate."""
+    """Expand allowed includes, polish, convert, strip attributes, and deduplicate."""
     entries = expand_v2fly_entries(
         source_url,
         fetcher,
         download_cache,
         expansion_cache,
+        exclude_includes,
     )
     return convert_v2fly_entries(entries)
 
@@ -470,7 +482,33 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
             _parse_source(source, f"{context}.sources[{source_index}]")
             for source_index, source in enumerate(raw_sources)
         )
-        services.append(ServiceConfig(name, output, header, sources))
+
+        raw_excludes = raw_service.get("exclude_includes", [])
+        if not isinstance(raw_excludes, list) or not all(
+            isinstance(item, str) and item.strip() for item in raw_excludes
+        ):
+            raise UpdateError(
+                f"{context}.exclude_includes must be a list of non-empty strings"
+            )
+        exclude_includes: list[str] = []
+        seen_excludes: set[str] = set()
+        for item in raw_excludes:
+            include_name = item.strip().casefold()
+            if (
+                not V2FLY_INCLUDE_NAME.fullmatch(include_name)
+                or ".." in include_name
+            ):
+                raise UpdateError(
+                    f"{context}.exclude_includes contains an invalid include name: "
+                    f"{item!r}"
+                )
+            if include_name not in seen_excludes:
+                seen_excludes.add(include_name)
+                exclude_includes.append(include_name)
+
+        services.append(
+            ServiceConfig(name, output, header, sources, tuple(exclude_includes))
+        )
 
     return tuple(services)
 
@@ -493,7 +531,9 @@ def prepare_services(
     """Download and validate every service before any file is written."""
     prepared: list[PreparedService] = []
     download_cache: dict[str, str] = {}
-    expansion_cache: dict[str, tuple[V2flyEntry, ...]] = {}
+    expansion_cache: dict[
+        tuple[str, frozenset[str]], tuple[V2flyEntry, ...]
+    ] = {}
 
     for service in services:
         merged: list[str] = []
@@ -506,6 +546,7 @@ def prepare_services(
                     fetcher,
                     download_cache,
                     expansion_cache,
+                    service.exclude_includes,
                 )
             else:
                 if source.url not in download_cache:

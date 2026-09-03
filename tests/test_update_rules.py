@@ -116,6 +116,143 @@ class RuleUpdaterTests(unittest.TestCase):
         with self.assertRaisesRegex(updater.UpdateError, "circular v2fly include"):
             updater.expand_v2fly_source(root_url, responses.__getitem__)
 
+    def test_v2fly_exclude_includes_is_recursive_and_cache_is_policy_specific(
+        self,
+    ) -> None:
+        root_url = "https://example.test/data/google"
+        responses = {
+            root_url: "include:youtube\ninclude:google-core",
+            "https://example.test/data/youtube": (
+                "youtube-only.example\ncommon-infra.example"
+            ),
+            "https://example.test/data/google-core": (
+                "common-infra.example\ngoogle-only.example\ninclude:youtube"
+            ),
+        }
+        downloads: dict[str, str] = {}
+        expansions: dict[
+            tuple[str, frozenset[str]], tuple[updater.V2flyEntry, ...]
+        ] = {}
+
+        complete = updater.expand_v2fly_source(
+            root_url,
+            responses.__getitem__,
+            downloads,
+            expansions,
+        )
+        isolated = updater.expand_v2fly_source(
+            root_url,
+            responses.__getitem__,
+            downloads,
+            expansions,
+            ("youtube",),
+        )
+
+        self.assertIn("DOMAIN-SUFFIX,youtube-only.example", complete)
+        self.assertNotIn("DOMAIN-SUFFIX,youtube-only.example", isolated)
+        self.assertEqual(
+            isolated,
+            [
+                "DOMAIN-SUFFIX,common-infra.example",
+                "DOMAIN-SUFFIX,google-only.example",
+            ],
+        )
+
+    def test_service_boundaries_are_stable_without_final_set_subtraction(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "rules.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "services": [
+                            service_config(
+                                "YouTube",
+                                "rule/YouTube.list",
+                                "https://example.test/data/youtube",
+                                "v2fly-domain-list",
+                            ),
+                            {
+                                "name": "Google",
+                                "output": "rule/Google.list",
+                                "header": "自动生成 Google",
+                                "exclude_includes": ["youtube"],
+                                "sources": [
+                                    {
+                                        "name": "Blackmatrix7 Google",
+                                        "url": "https://example.test/black-google",
+                                        "format": "loon-list",
+                                        "min_rules": 1,
+                                        "include_types": sorted(
+                                            updater.SUPPORTED_LOON_TYPES
+                                        ),
+                                    },
+                                    {
+                                        "name": "v2fly Google",
+                                        "url": "https://example.test/data/google",
+                                        "format": "v2fly-domain-list",
+                                        "min_rules": 1,
+                                    },
+                                ],
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            responses = {
+                "https://example.test/data/youtube": (
+                    "youtube-only.example\n"
+                    "explicit-overlap.example\n"
+                    "common-infra.example"
+                ),
+                "https://example.test/data/google": (
+                    "include:youtube\ninclude:google-core"
+                ),
+                "https://example.test/data/google-core": (
+                    "common-infra.example\ngoogle-only.example"
+                ),
+                "https://example.test/black-google": (
+                    "DOMAIN-SUFFIX,black-google.example\n"
+                    "DOMAIN-SUFFIX,explicit-overlap.example"
+                ),
+            }
+            first_time = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+            second_time = datetime(2026, 2, 3, 4, 5, 6, tzinfo=timezone.utc)
+
+            updater.update_all(
+                config_path,
+                root,
+                fetcher=responses.__getitem__,
+                updated_at=first_time,
+            )
+            youtube_path = root / "rule" / "YouTube.list"
+            google_path = root / "rule" / "Google.list"
+            youtube_contents = youtube_path.read_text(encoding="utf-8")
+            google_contents = google_path.read_text(encoding="utf-8")
+
+            self.assertIn("DOMAIN-SUFFIX,youtube-only.example", youtube_contents)
+            self.assertIn("DOMAIN-SUFFIX,explicit-overlap.example", youtube_contents)
+            self.assertNotIn("DOMAIN-SUFFIX,youtube-only.example", google_contents)
+            # Explicit Blackmatrix7 Google rules remain even if YouTube has them.
+            self.assertIn("DOMAIN-SUFFIX,explicit-overlap.example", google_contents)
+            # A rule independently owned by another Google include is not subtracted.
+            self.assertIn("DOMAIN-SUFFIX,common-infra.example", google_contents)
+
+            self.assertEqual(
+                updater.update_all(
+                    config_path,
+                    root,
+                    fetcher=responses.__getitem__,
+                    updated_at=second_time,
+                ),
+                (),
+            )
+            self.assertEqual(
+                youtube_path.read_text(encoding="utf-8"), youtube_contents
+            )
+            self.assertEqual(google_path.read_text(encoding="utf-8"), google_contents)
+
     def test_loon_supported_types_and_extra_fields_are_preserved(self) -> None:
         source = """
         # metadata
@@ -304,6 +441,7 @@ class RuleUpdaterTests(unittest.TestCase):
             [source.format_name for source in youtube.sources],
             ["loon-list", "v2fly-domain-list"],
         )
+        self.assertEqual(youtube.exclude_includes, ())
 
     def test_repository_config_defines_google_without_resolve_list(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
@@ -321,7 +459,8 @@ class RuleUpdaterTests(unittest.TestCase):
         )
         self.assertTrue(google.sources[0].url.endswith("/rule/Loon/Google/Google.list"))
         self.assertTrue(google.sources[1].url.endswith("/data/google"))
-        self.assertGreaterEqual(google.sources[1].min_rules, 900)
+        self.assertGreaterEqual(google.sources[1].min_rules, 700)
+        self.assertEqual(google.exclude_includes, ("youtube",))
         self.assertNotIn("Google_Resolve.list", google.sources[0].url)
 
     def test_google_merge_preserves_no_resolve_and_distinct_domain_types(self) -> None:
