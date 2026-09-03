@@ -32,7 +32,9 @@
       "output": "rule/Google.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
       "exclude_includes": [
-        "youtube"
+        "youtube",
+        "google-gemini",
+        "google-deepmind"
       ],
       "sources": [
         {
@@ -54,6 +56,115 @@
           "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google",
           "format": "v2fly-domain-list",
           "min_rules": 700
+        }
+      ]
+    },
+    {
+      "name": "Gemini",
+      "output": "rule/Gemini.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7 Gemini",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Gemini/Gemini.list",
+          "format": "loon-list",
+          "min_rules": 10,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "USER-AGENT",
+            "IP-CIDR",
+            "IP-CIDR6"
+          ]
+        },
+        {
+          "name": "Blackmatrix7 BardAI",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/BardAI/BardAI.list",
+          "format": "loon-list",
+          "min_rules": 8,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "USER-AGENT",
+            "IP-CIDR",
+            "IP-CIDR6"
+          ]
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google-gemini",
+          "format": "v2fly-domain-list",
+          "min_rules": 30
+        }
+      ]
+    },
+    {
+      "name": "Anthropic",
+      "output": "rule/Anthropic.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7 Anthropic",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Anthropic/Anthropic.list",
+          "format": "loon-list",
+          "min_rules": 2,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "USER-AGENT",
+            "IP-CIDR",
+            "IP-CIDR6"
+          ]
+        },
+        {
+          "name": "Blackmatrix7 Claude",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Claude/Claude.list",
+          "format": "loon-list",
+          "min_rules": 2,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "USER-AGENT",
+            "IP-CIDR",
+            "IP-CIDR6"
+          ]
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/anthropic",
+          "format": "v2fly-domain-list",
+          "min_rules": 7
+        }
+      ]
+    },
+    {
+      "name": "OpenAI",
+      "output": "rule/OpenAI.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7 OpenAI",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/OpenAI/OpenAI.list",
+          "format": "loon-list",
+          "min_rules": 30,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX",
+            "DOMAIN-KEYWORD",
+            "USER-AGENT",
+            "IP-CIDR",
+            "IP-CIDR6"
+          ]
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/openai",
+          "format": "v2fly-domain-list",
+          "min_rules": 20
         }
       ]
     }

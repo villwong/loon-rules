@@ -166,9 +166,11 @@ def parse_v2fly_entry(raw_line: str) -> V2flyEntry | V2flyInclude | None:
         prefix = "domain"
         value = value_token
 
-    value = value.strip().lower()
+    value = value.strip()
     if not value:
         return None
+    if prefix != "regexp":
+        value = value.lower()
 
     attributes: list[str] = []
     for field in extra_fields:

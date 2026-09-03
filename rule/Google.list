@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-03 13:43:18 UTC
-# 总规则数: 875
+# 自动更新时间: 2026-09-03 14:03:33 UTC
+# 总规则数: 874
 
 DOMAIN,voice.telephony.goog
 DOMAIN-SUFFIX,0emm.com
@@ -707,7 +707,6 @@ DOMAIN,crashlyticsreports-pa.googleapis.com
 DOMAIN,firebase-settings.crashlytics.com
 DOMAIN,update.crashlytics.com
 DOMAIN-SUFFIX,pub.dev
-DOMAIN-SUFFIX,ai.studio
 DOMAIN,redirector.c.play.google.com
 DOMAIN-SUFFIX,get.new
 DOMAIN-SUFFIX,get.rsvp

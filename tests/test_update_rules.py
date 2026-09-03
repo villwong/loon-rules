@@ -9,20 +9,24 @@ from pathlib import Path
 from scripts import update_rules as updater
 
 
-def service_config(name: str, output: str, url: str, format_name: str) -> dict:
+def source_config(name: str, url: str, format_name: str) -> dict:
     source: dict[str, object] = {
-        "name": f"{name} source",
+        "name": name,
         "url": url,
         "format": format_name,
         "min_rules": 1,
     }
     if format_name == "loon-list":
         source["include_types"] = sorted(updater.SUPPORTED_LOON_TYPES)
+    return source
+
+
+def service_config(name: str, output: str, url: str, format_name: str) -> dict:
     return {
         "name": name,
         "output": output,
         "header": f"自动生成 {name}",
-        "sources": [source],
+        "sources": [source_config(f"{name} source", url, format_name)],
     }
 
 
@@ -46,6 +50,14 @@ class RuleUpdaterTests(unittest.TestCase):
                 "DOMAIN-KEYWORD,video",
             ],
         )
+
+    def test_unsupported_v2fly_regexp_is_not_case_mutated(self) -> None:
+        entry = updater.parse_v2fly_entry(
+            r"regexp:^chatgpt-[A-Z]+-\S+\.example$"
+        )
+
+        self.assertIsInstance(entry, updater.V2flyEntry)
+        self.assertEqual(entry.value, r"^chatgpt-[A-Z]+-\S+\.example$")
 
     def test_v2fly_recursively_expands_nested_includes_then_deduplicates(self) -> None:
         root_url = "https://example.test/data/root"
@@ -252,6 +264,226 @@ class RuleUpdaterTests(unittest.TestCase):
                 youtube_path.read_text(encoding="utf-8"), youtube_contents
             )
             self.assertEqual(google_path.read_text(encoding="utf-8"), google_contents)
+
+    def test_google_gemini_boundary_uses_source_tree_not_final_subtraction(
+        self,
+    ) -> None:
+        google_url = "https://example.test/data/google"
+        gemini_url = "https://example.test/data/google-gemini"
+        responses = {
+            google_url: (
+                "shared-google.example\n"
+                "include:google-gemini\n"
+                "include:google-deepmind"
+            ),
+            gemini_url: "include:google-deepmind",
+            "https://example.test/data/google-deepmind": (
+                "gemini-only.example\nshared-google.example"
+            ),
+        }
+        excluded = ("google-gemini", "google-deepmind")
+
+        google_rules = updater.expand_v2fly_source(
+            google_url,
+            responses.__getitem__,
+            exclude_includes=excluded,
+        )
+        gemini_rules = updater.expand_v2fly_source(
+            gemini_url,
+            responses.__getitem__,
+        )
+
+        self.assertNotIn("DOMAIN-SUFFIX,gemini-only.example", google_rules)
+        self.assertIn("DOMAIN-SUFFIX,gemini-only.example", gemini_rules)
+        self.assertIn("DOMAIN-SUFFIX,shared-google.example", google_rules)
+        self.assertIn("DOMAIN-SUFFIX,shared-google.example", gemini_rules)
+
+    def test_ai_services_merge_only_explicit_sources_and_are_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "rules.json"
+            services = [
+                {
+                    "name": "Gemini",
+                    "output": "rule/Gemini.list",
+                    "header": "自动生成 Gemini",
+                    "sources": [
+                        source_config(
+                            "Blackmatrix7 Gemini",
+                            "https://example.test/black-gemini",
+                            "loon-list",
+                        ),
+                        source_config(
+                            "Blackmatrix7 BardAI",
+                            "https://example.test/black-bard",
+                            "loon-list",
+                        ),
+                        source_config(
+                            "v2fly",
+                            "https://example.test/data/google-gemini",
+                            "v2fly-domain-list",
+                        ),
+                    ],
+                },
+                {
+                    "name": "Anthropic",
+                    "output": "rule/Anthropic.list",
+                    "header": "自动生成 Anthropic",
+                    "sources": [
+                        source_config(
+                            "Blackmatrix7 Anthropic",
+                            "https://example.test/black-anthropic",
+                            "loon-list",
+                        ),
+                        source_config(
+                            "Blackmatrix7 Claude",
+                            "https://example.test/black-claude",
+                            "loon-list",
+                        ),
+                        source_config(
+                            "v2fly",
+                            "https://example.test/data/anthropic",
+                            "v2fly-domain-list",
+                        ),
+                    ],
+                },
+                {
+                    "name": "OpenAI",
+                    "output": "rule/OpenAI.list",
+                    "header": "自动生成 OpenAI",
+                    "sources": [
+                        source_config(
+                            "Blackmatrix7 OpenAI",
+                            "https://example.test/black-openai",
+                            "loon-list",
+                        ),
+                        source_config(
+                            "v2fly",
+                            "https://example.test/data/openai",
+                            "v2fly-domain-list",
+                        ),
+                    ],
+                },
+            ]
+            config_path.write_text(
+                json.dumps({"services": services}), encoding="utf-8"
+            )
+            responses = {
+                "https://example.test/black-gemini": (
+                    "DOMAIN-SUFFIX,bard.google.com\n"
+                    "DOMAIN-KEYWORD,generativelanguage"
+                ),
+                "https://example.test/black-bard": (
+                    "DOMAIN,generativelanguage.googleapis.com"
+                ),
+                "https://example.test/data/google-gemini": (
+                    "include:google-deepmind"
+                ),
+                "https://example.test/data/google-deepmind": (
+                    "gemini.google.com\nnotebooklm.google.com\n"
+                    "jules.google\nflow.google\nopal.google"
+                ),
+                "https://example.test/black-anthropic": (
+                    "DOMAIN-SUFFIX,anthropic.com\nDOMAIN-SUFFIX,claude.ai"
+                ),
+                "https://example.test/black-claude": (
+                    "DOMAIN,cdn.usefathom.com\nDOMAIN-SUFFIX,claude.com"
+                ),
+                "https://example.test/data/anthropic": (
+                    "anthropic.com\nclaude.ai\nclaude.com\nclau.de\n"
+                    "claudemcpclient.com\nclaudemcpcontent.com\n"
+                    "claudeusercontent.com"
+                ),
+                "https://example.test/black-openai": (
+                    "DOMAIN-SUFFIX,openai.com\n"
+                    "DOMAIN-SUFFIX,chatgpt.com\n"
+                    "IP-CIDR,192.0.2.1/32,no-resolve"
+                ),
+                "https://example.test/data/openai": (
+                    "openai.com\nchatgpt.com\nchat.com\n"
+                    "full:openaiassets.blob.core.windows.net\n"
+                    "regexp:^chatgpt-dynamic-[0-9]+\\.example$"
+                ),
+            }
+            first_time = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+            second_time = datetime(2026, 2, 3, 4, 5, 6, tzinfo=timezone.utc)
+
+            updater.update_all(
+                config_path,
+                root,
+                fetcher=responses.__getitem__,
+                updated_at=first_time,
+            )
+            outputs = {
+                name: (root / "rule" / f"{name}.list")
+                for name in ("Gemini", "Anthropic", "OpenAI")
+            }
+            contents = {
+                name: path.read_text(encoding="utf-8")
+                for name, path in outputs.items()
+            }
+
+            gemini_v2 = set(
+                updater.expand_v2fly_source(
+                    "https://example.test/data/google-gemini",
+                    responses.__getitem__,
+                )
+            )
+            anthropic_v2 = set(
+                updater.expand_v2fly_source(
+                    "https://example.test/data/anthropic",
+                    responses.__getitem__,
+                )
+            )
+            openai_v2 = set(
+                updater.expand_v2fly_source(
+                    "https://example.test/data/openai",
+                    responses.__getitem__,
+                )
+            )
+            output_rules = {
+                name: {
+                    line
+                    for line in text.splitlines()
+                    if line and not line.startswith("#")
+                }
+                for name, text in contents.items()
+            }
+
+            self.assertLessEqual(gemini_v2, output_rules["Gemini"])
+            self.assertLessEqual(anthropic_v2, output_rules["Anthropic"])
+            self.assertLessEqual(openai_v2, output_rules["OpenAI"])
+            self.assertIn("DOMAIN,cdn.usefathom.com", output_rules["Anthropic"])
+            self.assertIn("DOMAIN-SUFFIX,chat.com", output_rules["OpenAI"])
+            self.assertIn(
+                "IP-CIDR,192.0.2.1/32,no-resolve", output_rules["OpenAI"]
+            )
+
+            self.assertNotIn("DOMAIN-SUFFIX,openai.com", output_rules["Gemini"])
+            self.assertNotIn("DOMAIN-SUFFIX,anthropic.com", output_rules["Gemini"])
+            self.assertNotIn("DOMAIN-SUFFIX,openai.com", output_rules["Anthropic"])
+            self.assertNotIn("DOMAIN-SUFFIX,gemini.google.com", output_rules["Anthropic"])
+            self.assertNotIn("DOMAIN-SUFFIX,anthropic.com", output_rules["OpenAI"])
+            self.assertNotIn("DOMAIN-SUFFIX,gemini.google.com", output_rules["OpenAI"])
+            self.assertFalse((root / "rule" / "Claude.list").exists())
+            self.assertFalse((root / "rule" / "ChatGPT.list").exists())
+
+            self.assertEqual(
+                updater.update_all(
+                    config_path,
+                    root,
+                    fetcher=responses.__getitem__,
+                    updated_at=second_time,
+                ),
+                (),
+            )
+            self.assertEqual(
+                {
+                    name: path.read_text(encoding="utf-8")
+                    for name, path in outputs.items()
+                },
+                contents,
+            )
 
     def test_loon_supported_types_and_extra_fields_are_preserved(self) -> None:
         source = """
@@ -460,8 +692,55 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertTrue(google.sources[0].url.endswith("/rule/Loon/Google/Google.list"))
         self.assertTrue(google.sources[1].url.endswith("/data/google"))
         self.assertGreaterEqual(google.sources[1].min_rules, 700)
-        self.assertEqual(google.exclude_includes, ("youtube",))
+        self.assertEqual(
+            google.exclude_includes,
+            ("youtube", "google-gemini", "google-deepmind"),
+        )
         self.assertNotIn("Google_Resolve.list", google.sources[0].url)
+
+    def test_repository_config_defines_only_explicit_ai_services(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        services_by_name = {service.name: service for service in services}
+
+        self.assertEqual(
+            set(services_by_name),
+            {"YouTube", "Google", "Gemini", "Anthropic", "OpenAI"},
+        )
+        self.assertEqual(
+            services_by_name["Gemini"].output, Path("rule/Gemini.list")
+        )
+        self.assertEqual(
+            services_by_name["Anthropic"].output, Path("rule/Anthropic.list")
+        )
+        self.assertEqual(
+            services_by_name["OpenAI"].output, Path("rule/OpenAI.list")
+        )
+
+        source_urls = {
+            name: [source.url for source in services_by_name[name].sources]
+            for name in ("Gemini", "Anthropic", "OpenAI")
+        }
+        self.assertTrue(source_urls["Gemini"][-1].endswith("/data/google-gemini"))
+        self.assertTrue(source_urls["Anthropic"][-1].endswith("/data/anthropic"))
+        self.assertTrue(source_urls["OpenAI"][-1].endswith("/data/openai"))
+        self.assertTrue(any("/Loon/Gemini/" in url for url in source_urls["Gemini"]))
+        self.assertTrue(any("/Loon/BardAI/" in url for url in source_urls["Gemini"]))
+        self.assertTrue(
+            any("/Loon/Anthropic/" in url for url in source_urls["Anthropic"])
+        )
+        self.assertTrue(
+            any("/Loon/Claude/" in url for url in source_urls["Anthropic"])
+        )
+        self.assertTrue(any("/Loon/OpenAI/" in url for url in source_urls["OpenAI"]))
+        self.assertFalse(
+            any(
+                "category-ai" in url.casefold()
+                for urls in source_urls.values()
+                for url in urls
+            )
+        )
+        self.assertNotIn("Claude", services_by_name)
+        self.assertNotIn("ChatGPT", services_by_name)
 
     def test_google_merge_preserves_no_resolve_and_distinct_domain_types(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
