@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -36,6 +38,7 @@ V2FLY_TYPE_MAP = {
     "keyword": "DOMAIN-KEYWORD",
 }
 SUPPORTED_FORMATS = {"loon-list", "v2fly-domain-list"}
+V2FLY_INCLUDE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._!@+-]*$")
 
 UPDATED_PREFIX = "# 自动更新时间: "
 TOTAL_PREFIX = "# 总规则数: "
@@ -43,6 +46,24 @@ TOTAL_PREFIX = "# 总规则数: "
 
 class UpdateError(RuntimeError):
     """Raised when configuration or upstream data cannot be used safely."""
+
+
+@dataclass(frozen=True)
+class V2flyEntry:
+    type_name: str
+    value: str
+    attributes: tuple[str, ...] = ()
+
+    @property
+    def key(self) -> tuple[str, str, tuple[str, ...]]:
+        return self.type_name, self.value, self.attributes
+
+
+@dataclass(frozen=True)
+class V2flyInclude:
+    name: str
+    must_attributes: tuple[str, ...] = ()
+    banned_attributes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -106,37 +127,201 @@ def download_text(url: str, attempts: int = 3, timeout: int = 30) -> str:
     ) from last_error
 
 
-def parse_v2fly(text: str) -> list[str]:
-    """Convert supported domain-list-community entries to Loon rules."""
-    rules: list[str] = []
+def parse_v2fly_entry(raw_line: str) -> V2flyEntry | V2flyInclude | None:
+    """Parse one v2fly entry while retaining attributes for include filters."""
+    line = raw_line.split("#", 1)[0].strip()
+    if not line:
+        return None
 
+    parts = line.split()
+    value_token = parts[0]
+    extra_fields = parts[1:]
+
+    if ":" in value_token:
+        prefix, value = value_token.split(":", 1)
+        prefix = prefix.lower()
+        if prefix == "include":
+            must_attributes: list[str] = []
+            banned_attributes: list[str] = []
+            for field in extra_fields:
+                if not field.startswith("@") or len(field) == 1:
+                    raise UpdateError(f"invalid v2fly include field: {field!r}")
+                attribute = field[1:].lower()
+                if attribute.startswith("-"):
+                    if len(attribute) == 1:
+                        raise UpdateError("empty banned v2fly include attribute")
+                    banned_attributes.append(attribute[1:])
+                else:
+                    must_attributes.append(attribute)
+            return V2flyInclude(
+                name=value.lower(),
+                must_attributes=tuple(sorted(must_attributes)),
+                banned_attributes=tuple(sorted(banned_attributes)),
+            )
+        if prefix not in {*V2FLY_TYPE_MAP, "regexp"}:
+            print(f"Skipping unsupported v2fly entry: {raw_line}", file=sys.stderr)
+            return None
+    else:
+        prefix = "domain"
+        value = value_token
+
+    value = value.strip().lower()
+    if not value:
+        return None
+
+    attributes: list[str] = []
+    for field in extra_fields:
+        if field.startswith("@") and len(field) > 1:
+            attributes.append(field[1:].lower())
+        elif field.startswith("&") and len(field) > 1:
+            # Affiliations add this same entry to another list in the upstream
+            # build. The entry still belongs to its declaring list.
+            continue
+        else:
+            raise UpdateError(f"invalid v2fly entry field: {field!r}")
+    return V2flyEntry(prefix, value, tuple(sorted(attributes)))
+
+
+def convert_v2fly_entries(entries: Iterable[V2flyEntry]) -> list[str]:
+    """Convert supported v2fly entries to Loon after discarding attributes."""
+    rules: list[str] = []
+    for entry in entries:
+        loon_type = V2FLY_TYPE_MAP.get(entry.type_name)
+        if loon_type is None:
+            print(
+                f"Skipping unsupported v2fly entry: {entry.type_name}:{entry.value}",
+                file=sys.stderr,
+            )
+            continue
+        rules.append(f"{loon_type},{entry.value}")
+    return deduplicate(rules)
+
+
+def parse_v2fly(text: str) -> list[str]:
+    """Convert direct domain-list-community entries, excluding includes."""
+    entries: list[V2flyEntry] = []
     for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
+        entry = parse_v2fly_entry(raw_line)
+        if isinstance(entry, V2flyEntry):
+            entries.append(entry)
+    return convert_v2fly_entries(entries)
+
+
+def resolve_v2fly_include_url(current_url: str, include_name: str) -> str:
+    """Resolve a v2fly include to a sibling file in the same data directory."""
+    if not V2FLY_INCLUDE_NAME.fullmatch(include_name) or ".." in include_name:
+        raise UpdateError(f"invalid v2fly include name: {include_name!r}")
+    encoded_name = urllib.parse.quote(include_name, safe="!@+._-")
+    return urllib.parse.urljoin(current_url, encoded_name)
+
+
+def matches_v2fly_include(entry: V2flyEntry, inclusion: V2flyInclude) -> bool:
+    """Apply v2fly's must-have and banned attribute include filters."""
+    attributes = set(entry.attributes)
+    if not attributes:
+        return not inclusion.must_attributes
+    if not set(inclusion.must_attributes).issubset(attributes):
+        return False
+    return not set(inclusion.banned_attributes).intersection(attributes)
+
+
+def polish_v2fly_entries(entries: Iterable[V2flyEntry]) -> list[V2flyEntry]:
+    """Apply v2fly's parent-domain pruning while attributes are still present."""
+    rough_entries: dict[tuple[str, str, tuple[str, ...]], V2flyEntry] = {
+        entry.key: entry for entry in entries
+    }
+    parents: set[str] = set()
+
+    for entry in rough_entries.values():
+        if entry.type_name != "domain":
+            continue
+        parents.add(entry.value)
+        if entry.attributes:
+            suffix = ":" + ",".join(f"@{attr}" for attr in entry.attributes)
+            parents.add(entry.value + suffix)
+
+    polished: list[V2flyEntry] = []
+    for entry in rough_entries.values():
+        if entry.type_name in {"regexp", "keyword"}:
+            polished.append(entry)
+            continue
+        if entry.type_name not in {"domain", "full"}:
             continue
 
-        # Attributes such as @cn, @!cn and @ads follow the value after
-        # whitespace. Inline comments, when present, are handled the same way.
-        value_token = line.split("#", 1)[0].split()[0]
-
-        if ":" in value_token:
-            prefix, value = value_token.split(":", 1)
-            loon_type = V2FLY_TYPE_MAP.get(prefix.lower())
-            if loon_type is None:
-                print(
-                    f"Skipping unsupported v2fly entry: {raw_line}",
-                    file=sys.stderr,
-                )
-                continue
+        if entry.attributes:
+            suffix = ":" + ",".join(f"@{attr}" for attr in entry.attributes)
+            parent_candidate = entry.value + suffix
         else:
-            loon_type = "DOMAIN-SUFFIX"
-            value = value_token
+            parent_candidate = entry.value
+        if entry.type_name == "full":
+            parent_candidate = "." + parent_candidate
 
-        value = value.strip()
-        if value:
-            rules.append(f"{loon_type},{value}")
+        redundant = False
+        while "." in parent_candidate:
+            parent_candidate = parent_candidate.split(".", 1)[1]
+            if parent_candidate in parents:
+                redundant = True
+                break
+        if not redundant:
+            polished.append(entry)
 
-    return rules
+    return polished
+
+
+def expand_v2fly_entries(
+    source_url: str,
+    fetcher: Callable[[str], str],
+    download_cache: dict[str, str] | None = None,
+    expansion_cache: dict[str, tuple[V2flyEntry, ...]] | None = None,
+) -> list[V2flyEntry]:
+    """Recursively resolve includes and return upstream-polished v2fly entries."""
+    downloads = download_cache if download_cache is not None else {}
+    expansions = expansion_cache if expansion_cache is not None else {}
+
+    def visit(url: str, active_urls: tuple[str, ...]) -> tuple[V2flyEntry, ...]:
+        if url in active_urls:
+            cycle_start = active_urls.index(url)
+            cycle = [*active_urls[cycle_start:], url]
+            raise UpdateError(f"circular v2fly include: {' -> '.join(cycle)}")
+        if url in expansions:
+            return expansions[url]
+        if url not in downloads:
+            downloads[url] = fetcher(url)
+
+        entries: dict[tuple[str, str, tuple[str, ...]], V2flyEntry] = {}
+        next_active = (*active_urls, url)
+        for raw_line in downloads[url].splitlines():
+            entry = parse_v2fly_entry(raw_line)
+            if entry is None:
+                continue
+            if isinstance(entry, V2flyInclude):
+                include_url = resolve_v2fly_include_url(url, entry.name)
+                for included_entry in visit(include_url, next_active):
+                    if matches_v2fly_include(included_entry, entry):
+                        entries[included_entry.key] = included_entry
+            else:
+                entries[entry.key] = entry
+
+        expansions[url] = tuple(entries.values())
+        return expansions[url]
+
+    return polish_v2fly_entries(visit(source_url, ()))
+
+
+def expand_v2fly_source(
+    source_url: str,
+    fetcher: Callable[[str], str],
+    download_cache: dict[str, str] | None = None,
+    expansion_cache: dict[str, tuple[V2flyEntry, ...]] | None = None,
+) -> list[str]:
+    """Recursively expand, polish, convert, strip attributes, and deduplicate."""
+    entries = expand_v2fly_entries(
+        source_url,
+        fetcher,
+        download_cache,
+        expansion_cache,
+    )
+    return convert_v2fly_entries(entries)
 
 
 def parse_loon(text: str, include_types: Iterable[str]) -> list[str]:
@@ -308,15 +493,24 @@ def prepare_services(
     """Download and validate every service before any file is written."""
     prepared: list[PreparedService] = []
     download_cache: dict[str, str] = {}
+    expansion_cache: dict[str, tuple[V2flyEntry, ...]] = {}
 
     for service in services:
         merged: list[str] = []
         source_counts: list[tuple[str, int]] = []
 
         for source in service.sources:
-            if source.url not in download_cache:
-                download_cache[source.url] = fetcher(source.url)
-            rules = parse_source(source, download_cache[source.url])
+            if source.format_name == "v2fly-domain-list":
+                rules = expand_v2fly_source(
+                    source.url,
+                    fetcher,
+                    download_cache,
+                    expansion_cache,
+                )
+            else:
+                if source.url not in download_cache:
+                    download_cache[source.url] = fetcher(source.url)
+                rules = parse_source(source, download_cache[source.url])
             if len(rules) < source.min_rules:
                 raise UpdateError(
                     f"{service.name}/{source.name} yielded only {len(rules)} rules; "

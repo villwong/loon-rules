@@ -50,7 +50,7 @@
           "name": "v2fly",
           "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google",
           "format": "v2fly-domain-list",
-          "min_rules": 500
+          "min_rules": 900
         }
       ]
     }

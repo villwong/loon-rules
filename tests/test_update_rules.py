@@ -47,6 +47,75 @@ class RuleUpdaterTests(unittest.TestCase):
             ],
         )
 
+    def test_v2fly_recursively_expands_nested_includes_then_deduplicates(self) -> None:
+        root_url = "https://example.test/data/root"
+        responses = {
+            root_url: "root.example\ninclude:child\nfull:after.example @cn",
+            "https://example.test/data/child": (
+                "domain:child.example @!cn\ninclude:grandchild @ads\nroot.example"
+            ),
+            "https://example.test/data/grandchild": "keyword:nested @ads",
+        }
+
+        rules = updater.expand_v2fly_source(root_url, responses.__getitem__)
+
+        self.assertEqual(
+            rules,
+            [
+                "DOMAIN-SUFFIX,root.example",
+                "DOMAIN-SUFFIX,child.example",
+                "DOMAIN-KEYWORD,nested",
+                "DOMAIN,after.example",
+            ],
+        )
+        self.assertFalse(any("@" in rule for rule in rules))
+
+    def test_v2fly_include_attribute_filters(self) -> None:
+        root_url = "https://example.test/data/root"
+        responses = {
+            root_url: "include:child @ads @-cn",
+            "https://example.test/data/child": (
+                "ads.example @ads\n"
+                "ads-cn.example @ads @cn\n"
+                "plain.example\n"
+                "china.example @cn"
+            ),
+        }
+
+        self.assertEqual(
+            updater.expand_v2fly_source(root_url, responses.__getitem__),
+            ["DOMAIN-SUFFIX,ads.example"],
+        )
+
+    def test_v2fly_reuses_include_downloads(self) -> None:
+        root_url = "https://example.test/data/root"
+        shared_url = "https://example.test/data/shared"
+        responses = {
+            root_url: "include:shared\ninclude:shared",
+            shared_url: "shared.example",
+        }
+        fetch_count: dict[str, int] = {}
+
+        def fetcher(url: str) -> str:
+            fetch_count[url] = fetch_count.get(url, 0) + 1
+            return responses[url]
+
+        self.assertEqual(
+            updater.expand_v2fly_source(root_url, fetcher),
+            ["DOMAIN-SUFFIX,shared.example"],
+        )
+        self.assertEqual(fetch_count, {root_url: 1, shared_url: 1})
+
+    def test_v2fly_rejects_circular_includes(self) -> None:
+        root_url = "https://example.test/data/root"
+        responses = {
+            root_url: "include:child",
+            "https://example.test/data/child": "include:root",
+        }
+
+        with self.assertRaisesRegex(updater.UpdateError, "circular v2fly include"):
+            updater.expand_v2fly_source(root_url, responses.__getitem__)
+
     def test_loon_supported_types_and_extra_fields_are_preserved(self) -> None:
         source = """
         # metadata
@@ -110,7 +179,7 @@ class RuleUpdaterTests(unittest.TestCase):
                 encoding="utf-8",
             )
             responses = {
-                "https://example.test/one": "one.example @cn\nfull:exact.one.example",
+                "https://example.test/one": "one.example @cn\nfull:exact.other.example",
                 "https://example.test/two": (
                     "USER-AGENT,*Two*\nIP-CIDR,192.0.2.0/24,no-resolve"
                 ),
@@ -133,7 +202,7 @@ class RuleUpdaterTests(unittest.TestCase):
 
             self.assertEqual(changed, (one_path, two_path))
             self.assertIn("DOMAIN-SUFFIX,one.example", first_contents[0])
-            self.assertIn("DOMAIN,exact.one.example", first_contents[0])
+            self.assertIn("DOMAIN,exact.other.example", first_contents[0])
             self.assertIn("USER-AGENT,*Two*", first_contents[1])
             self.assertIn("IP-CIDR,192.0.2.0/24,no-resolve", first_contents[1])
 
@@ -252,6 +321,7 @@ class RuleUpdaterTests(unittest.TestCase):
         )
         self.assertTrue(google.sources[0].url.endswith("/rule/Loon/Google/Google.list"))
         self.assertTrue(google.sources[1].url.endswith("/data/google"))
+        self.assertGreaterEqual(google.sources[1].min_rules, 900)
         self.assertNotIn("Google_Resolve.list", google.sources[0].url)
 
     def test_google_merge_preserves_no_resolve_and_distinct_domain_types(self) -> None:
