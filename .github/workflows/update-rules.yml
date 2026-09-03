@@ -1,4 +1,4 @@
-name: Update YouTube Loon Rules
+name: Update Loon Rules
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: update-youtube-loon-rules
+  group: update-loon-rules
   cancel-in-progress: false
 
 jobs:
@@ -31,19 +31,19 @@ jobs:
       - name: Run updater tests
         run: python -m unittest discover -s tests -v
 
-      - name: Update YouTube rules
-        run: python scripts/update_youtube_rules.py
+      - name: Update configured rules
+        run: python scripts/update_rules.py
 
       - name: Commit and push changes
         shell: bash
         run: |
-          git add rule/YouTube.list
+          git add -- rule
           if git diff --cached --quiet; then
-            echo "YouTube rules are already up to date."
+            echo "All configured rules are already up to date."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: update YouTube rules"
+          git commit -m "chore: update Loon rules"
           git push
