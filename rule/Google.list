@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-03 14:03:33 UTC
-# 总规则数: 874
+# 自动更新时间: 2026-09-20 10:33:08 UTC
+# 总规则数: 875
 
 DOMAIN,voice.telephony.goog
 DOMAIN-SUFFIX,0emm.com
@@ -702,6 +702,7 @@ IP-CIDR,74.125.0.0/16,no-resolve
 IP-CIDR6,2620:120:e000::/40,no-resolve
 DOMAIN-SUFFIX,android
 DOMAIN-SUFFIX,firebase.com
+DOMAIN-SUFFIX,firebase.dev
 DOMAIN-SUFFIX,firebase.io
 DOMAIN,crashlyticsreports-pa.googleapis.com
 DOMAIN,firebase-settings.crashlytics.com
