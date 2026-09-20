@@ -271,6 +271,54 @@ class RuleUpdaterTests(unittest.TestCase):
             )
             self.assertEqual(google_path.read_text(encoding="utf-8"), google_contents)
 
+    def test_explicit_boundary_source_removes_only_matching_rules(self) -> None:
+        include_source = updater.SourceConfig(
+            "Microsoft source",
+            "https://example.test/microsoft",
+            "loon-list",
+            1,
+            tuple(sorted(updater.SUPPORTED_LOON_TYPES)),
+        )
+        boundary_source = updater.SourceConfig(
+            "GitHub boundary",
+            "https://example.test/github",
+            "loon-list",
+            1,
+            tuple(sorted(updater.SUPPORTED_LOON_TYPES)),
+        )
+        service = updater.ServiceConfig(
+            "Microsoft",
+            Path("rule/Microsoft.list"),
+            "Microsoft",
+            (include_source,),
+            exclude_sources=(boundary_source,),
+        )
+        responses = {
+            include_source.url: (
+                "DOMAIN-SUFFIX,microsoft.com\n"
+                "DOMAIN-SUFFIX,github.com\n"
+                "DOMAIN-SUFFIX,shared.example"
+            ),
+            boundary_source.url: (
+                "DOMAIN-SUFFIX,github.com\n"
+                "DOMAIN-SUFFIX,githubusercontent.com"
+            ),
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = updater.prepare_services(
+                (service,), Path(directory), responses.__getitem__
+            )[0]
+
+        self.assertEqual(
+            prepared.rules,
+            (
+                "DOMAIN-SUFFIX,microsoft.com",
+                "DOMAIN-SUFFIX,shared.example",
+            ),
+        )
+        self.assertEqual(prepared.excluded_rules, 1)
+
     def test_google_gemini_boundary_uses_source_tree_not_final_subtraction(
         self,
     ) -> None:
@@ -515,6 +563,74 @@ class RuleUpdaterTests(unittest.TestCase):
             ],
         )
 
+    def test_loon_domain_set_conversion(self) -> None:
+        source = """
+        # metadata
+        .example.com
+        exact.example.net
+        .EXAMPLE.com
+        """
+
+        self.assertEqual(
+            updater.parse_loon_domain_set(source),
+            [
+                "DOMAIN-SUFFIX,example.com",
+                "DOMAIN,exact.example.net",
+            ],
+        )
+
+    def test_loon_domain_set_rejects_mixed_rule_syntax(self) -> None:
+        with self.assertRaisesRegex(updater.UpdateError, "domain-set entry"):
+            updater.parse_loon_domain_set("DOMAIN-SUFFIX,example.com")
+
+    def test_local_supplement_is_merged_without_downloading(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            supplement = root / "config" / "supplements" / "Example.list"
+            supplement.parent.mkdir(parents=True)
+            supplement.write_text(
+                "DOMAIN-SUFFIX,supplement.example\n",
+                encoding="utf-8",
+            )
+            config_path = root / "config" / "rules.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "services": [
+                            {
+                                "name": "Example",
+                                "output": "rule/Example.list",
+                                "header": "自动生成 Example",
+                                "sources": [
+                                    {
+                                        "name": "local",
+                                        "path": "config/supplements/Example.list",
+                                        "format": "local-loon-list",
+                                        "min_rules": 1,
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            def unexpected_fetch(_url: str) -> str:
+                self.fail("local supplement must not use the network fetcher")
+
+            changed = updater.update_all(
+                config_path,
+                root,
+                fetcher=unexpected_fetch,
+            )
+
+            self.assertEqual(changed, (root / "rule" / "Example.list",))
+            self.assertIn(
+                "DOMAIN-SUFFIX,supplement.example",
+                changed[0].read_text(encoding="utf-8"),
+            )
+
     def test_deduplication_keeps_domain_types_distinct(self) -> None:
         rules = [
             "DOMAIN,example.com",
@@ -526,6 +642,39 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertEqual(
             updater.deduplicate(rules),
             ["DOMAIN,example.com", "DOMAIN-SUFFIX,example.com"],
+        )
+
+    def test_domain_only_policy_filters_sorts_and_collapses(self) -> None:
+        service = updater.ServiceConfig(
+            "IPQuery",
+            Path("rule/ip-query.list"),
+            "IP query",
+            (),
+            sort_rules=True,
+            domain_only=True,
+            collapse_domain_types=True,
+        )
+        rules = updater.finalize_service_rules(
+            service,
+            [
+                "DOMAIN,z.example",
+                "DOMAIN-SUFFIX,z.example",
+                "DOMAIN-SUFFIX,B.example",
+                "IP-CIDR,192.0.2.0/24,no-resolve",
+                "DOMAIN-SUFFIX,bad_domain.example",
+                "DOMAIN-SUFFIX,singlelabel",
+                "DOMAIN,a.example",
+                "DOMAIN,a.example",
+            ],
+        )
+
+        self.assertEqual(
+            rules,
+            [
+                "DOMAIN,a.example",
+                "DOMAIN-SUFFIX,b.example",
+                "DOMAIN-SUFFIX,z.example",
+            ],
         )
 
     def test_configuration_drives_multiple_services_and_no_change(self) -> None:
@@ -770,11 +919,18 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertEqual(
             set(services_by_name),
             {
+                "Apple",
+                "ApplePush",
+                "IPQuery",
+                "TikTok",
+                "ChinaMax",
+                "GoogleVoice",
                 "YouTube",
                 "Google",
                 "Gemini",
                 "Anthropic",
                 "OpenAI",
+                "WhatsApp",
                 *expected_sources,
             },
         )
@@ -788,7 +944,7 @@ class RuleUpdaterTests(unittest.TestCase):
                 if blackmatrix_name is None:
                     self.assertEqual(len(service.sources), 1)
                 else:
-                    self.assertEqual(len(service.sources), 2)
+                    self.assertGreaterEqual(len(service.sources), 2)
                     self.assertIn(
                         f"/rule/Loon/{blackmatrix_name}/{blackmatrix_name}.list",
                         service.sources[0].url,
@@ -820,6 +976,97 @@ class RuleUpdaterTests(unittest.TestCase):
                 for source in service.sources
                 for marker in ("/data/alipay", "/data/alibaba", "/data/ant-group")
             )
+        )
+
+    def test_repository_config_merges_requested_fragmented_services(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        services_by_name = {service.name: service for service in services}
+
+        expected_formats = {
+            "Apple": [
+                "loon-list",
+                "loon-domain-set",
+                "loon-list",
+                "v2fly-domain-list",
+            ],
+            "ApplePush": ["local-loon-list"],
+            "TikTok": ["loon-list", "v2fly-domain-list"],
+            "ChinaMax": ["loon-list", "loon-domain-set", "loon-list"],
+            "GoogleVoice": ["loon-list", "local-loon-list"],
+            "Twitter": ["loon-list", "loon-list", "v2fly-domain-list"],
+            "WhatsApp": ["loon-list", "loon-list", "v2fly-domain-list"],
+        }
+
+        for name, formats in expected_formats.items():
+            with self.subTest(service=name):
+                service = services_by_name[name]
+                self.assertEqual(service.output, Path(f"rule/{name}.list"))
+                self.assertEqual(
+                    [source.format_name for source in service.sources],
+                    formats,
+                )
+
+        apple = services_by_name["Apple"]
+        apple_urls = [source.url for source in apple.sources]
+        self.assertTrue(any(url.endswith("/Apple.list") for url in apple_urls))
+        self.assertTrue(any(url.endswith("/Apple_Domain.list") for url in apple_urls))
+        self.assertTrue(any(url.endswith("/Apple_Resolve.list") for url in apple_urls))
+
+        apple_push = services_by_name["ApplePush"]
+        self.assertEqual(
+            apple_push.sources[0].local_path,
+            Path("config/supplements/ApplePush.list"),
+        )
+
+        ip_query = services_by_name["IPQuery"]
+        self.assertEqual(ip_query.output, Path("rule/ip-query.list"))
+        self.assertTrue(ip_query.sort_rules)
+        self.assertTrue(ip_query.domain_only)
+        self.assertTrue(ip_query.collapse_domain_types)
+        self.assertTrue(
+            ip_query.sources[0].url.endswith("/data/category-ip-geo-detect")
+        )
+        self.assertEqual(
+            ip_query.sources[1].local_path,
+            Path("config/supplements/IPQuery.list"),
+        )
+
+        china_urls = [
+            source.url for source in services_by_name["ChinaMax"].sources
+        ]
+        self.assertFalse(any("No_IPv6" in url for url in china_urls))
+        self.assertTrue(any(url.endswith("/ChinaMax.list") for url in china_urls))
+        self.assertTrue(
+            any(url.endswith("/ChinaMax_Domain.list") for url in china_urls)
+        )
+        self.assertTrue(
+            any(url.endswith("/ChinaMax_Resolve.list") for url in china_urls)
+        )
+
+        twitter_urls = [
+            source.url for source in services_by_name["Twitter"].sources
+        ]
+        whatsapp_urls = [
+            source.url for source in services_by_name["WhatsApp"].sources
+        ]
+        self.assertTrue(
+            any(url.endswith("/Twitter_Resolve.list") for url in twitter_urls)
+        )
+        self.assertTrue(
+            any(url.endswith("/Whatsapp_Resolve.list") for url in whatsapp_urls)
+        )
+
+        google_voice = services_by_name["GoogleVoice"]
+        self.assertEqual(
+            google_voice.sources[1].local_path,
+            Path("config/supplements/GoogleVoice.list"),
+        )
+
+        microsoft = services_by_name["Microsoft"]
+        self.assertEqual(microsoft.exclude_includes, ("github",))
+        self.assertEqual(len(microsoft.exclude_sources), 2)
+        self.assertTrue(
+            all("github" in source.name.casefold() for source in microsoft.exclude_sources)
         )
 
     def test_requested_services_preserve_every_configured_source_rule(self) -> None:
@@ -907,6 +1154,44 @@ class RuleUpdaterTests(unittest.TestCase):
 
     def test_generated_requested_rules_are_valid_and_contain_core_domains(self) -> None:
         required_rules = {
+            "Apple": {
+                "DOMAIN-SUFFIX,apple.com",
+            },
+            "ApplePush": {
+                "DOMAIN-SUFFIX,push.apple.com",
+                "IP-CIDR,17.249.0.0/16,no-resolve",
+                "IP-CIDR6,2620:149:a44::/48,no-resolve",
+            },
+            "ip-query": {
+                "DOMAIN-SUFFIX,ip.sb",
+                "DOMAIN-SUFFIX,ipinfo.io",
+                "DOMAIN-SUFFIX,browserleaks.com",
+                "DOMAIN-SUFFIX,dnsleaktest.com",
+            },
+            "TikTok": {
+                "DOMAIN-SUFFIX,tiktok.com",
+                "DOMAIN-SUFFIX,analytics.tiktok.com",
+                "DOMAIN-SUFFIX,tiktok-minis.com",
+                "DOMAIN-SUFFIX,tiktok-row.net",
+                "DOMAIN-SUFFIX,tiktokeu-cdn.com",
+                "DOMAIN-SUFFIX,tiktokminis.us",
+                "DOMAIN-SUFFIX,tiktokrow-cdn.com",
+                "DOMAIN-SUFFIX,ttcdn-us.com",
+                "DOMAIN,roovza.inapps.appsflyersdk.com",
+                "DOMAIN,roovza.launches.appsflyersdk.com",
+                "DOMAIN,roovza.skadsdk.appsflyersdk.com",
+            },
+            "ChinaMax": {
+                "DOMAIN-SUFFIX,baidu.com",
+                "DOMAIN-SUFFIX,qq.com",
+            },
+            "GoogleVoice": {
+                "DOMAIN,lens.l.google.com",
+                "DOMAIN,voice.google.com",
+                "DOMAIN,lens.voice.google.com",
+                "DOMAIN,siplink.telephony.goog",
+            },
+            "WhatsApp": {"DOMAIN-SUFFIX,whatsapp.com"},
             "Bybit": {"DOMAIN-SUFFIX,bybit.com"},
             "Wise": {
                 "DOMAIN-SUFFIX,transferwise.com",
@@ -959,13 +1244,82 @@ class RuleUpdaterTests(unittest.TestCase):
                         for token in ("include:", "regexp:", " @", ":@")
                     )
                 )
+
+                for rule in rules:
+                    if rule.startswith(("IP-CIDR,", "IP-CIDR6,")):
+                        self.assertIn(len(rule.split(",")), {2, 3})
+
+        for name in ("Apple", "ChinaMax", "Twitter", "WhatsApp"):
+            with self.subTest(resolve_variants=name):
+                output = updater.REPOSITORY_ROOT / "rule" / f"{name}.list"
+                ip_rules = [
+                    line.strip().split(",")
+                    for line in output.read_text(encoding="utf-8").splitlines()
+                    if line.startswith(("IP-CIDR,", "IP-CIDR6,"))
+                ]
+                variants: dict[tuple[str, str], set[tuple[str, ...]]] = {}
+                for fields in ip_rules:
+                    variants.setdefault(tuple(fields[:2]), set()).add(
+                        tuple(fields[2:])
+                    )
                 self.assertTrue(
-                    all(
-                        rule.endswith(",no-resolve")
-                        for rule in rules
-                        if rule.startswith(("IP-CIDR,", "IP-CIDR6,"))
+                    any(
+                        () in modifiers and ("no-resolve",) in modifiers
+                        for modifiers in variants.values()
                     )
                 )
+
+        supplement_rules = {
+            line.strip()
+            for line in (
+                updater.REPOSITORY_ROOT / "config/supplements/ApplePush.list"
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith(("#", ";"))
+        }
+        apple_push_rules = set(
+            (updater.REPOSITORY_ROOT / "rule/ApplePush.list")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        )
+        self.assertLessEqual(supplement_rules, apple_push_rules)
+
+        ip_query_rules = [
+            line
+            for line in (updater.REPOSITORY_ROOT / "rule/ip-query.list")
+            .read_text(encoding="utf-8")
+            .splitlines()
+            if line and not line.startswith("#")
+        ]
+        self.assertEqual(
+            ip_query_rules,
+            sorted(
+                ip_query_rules,
+                key=lambda rule: (
+                    updater.rule_key(rule)[1],
+                    {"DOMAIN-SUFFIX": 0, "DOMAIN": 1}.get(
+                        updater.rule_key(rule)[0], 99
+                    ),
+                    updater.rule_key(rule),
+                ),
+            ),
+        )
+        domains_by_type = {
+            rule_type: {
+                fields[1]
+                for rule in ip_query_rules
+                if (fields := updater.rule_key(rule))[0] == rule_type
+            }
+            for rule_type in ("DOMAIN", "DOMAIN-SUFFIX")
+        }
+        self.assertFalse(
+            domains_by_type["DOMAIN"] & domains_by_type["DOMAIN-SUFFIX"]
+        )
+        self.assertTrue(
+            all(
+                updater.normalize_domain(updater.rule_key(rule)[1], True)
+                for rule in ip_query_rules
+            )
+        )
 
         self.assertFalse((updater.REPOSITORY_ROOT / "rule/AlipayHK.list").exists())
 
@@ -1003,6 +1357,43 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertIn("IP-CIDR6,2001:db8::/32,no-resolve", merged)
         self.assertFalse(any("@cn" in rule or "@ads" in rule for rule in merged))
 
+    def test_legacy_root_rules_are_fully_migrated(self) -> None:
+        for migrated_path in (
+            Path("ip-query.list"),
+            Path("TikTok-new.list"),
+            Path("apple-push.list"),
+            Path("apple.list"),
+        ):
+            self.assertFalse((updater.REPOSITORY_ROOT / migrated_path).exists())
+
+        self.assertEqual(list(updater.REPOSITORY_ROOT.glob("*.list")), [])
+
+    def test_config_outputs_exactly_match_rule_directory(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        configured = {service.output.as_posix() for service in services}
+        generated = {
+            path.relative_to(updater.REPOSITORY_ROOT).as_posix()
+            for path in (updater.REPOSITORY_ROOT / "rule").glob("*.list")
+        }
+
+        self.assertEqual(len(services), 24)
+        self.assertEqual(configured, generated)
+        self.assertTrue(
+            all((updater.REPOSITORY_ROOT / output).is_file() for output in configured)
+        )
+
+    def test_workflow_runs_tests_updates_and_skips_empty_commits(self) -> None:
+        workflow = (
+            updater.REPOSITORY_ROOT / ".github/workflows/update-rules.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('cron: "0 */6 * * *"', workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("python -m unittest discover -s tests -v", workflow)
+        self.assertIn("python scripts/update_rules.py", workflow)
+        self.assertIn("git add -- rule", workflow)
+        self.assertIn("git diff --cached --quiet", workflow)
+
     def test_rejects_output_outside_rule_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config_path = Path(directory) / "rules.json"
@@ -1023,6 +1414,35 @@ class RuleUpdaterTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(updater.UpdateError, "safe relative path"):
+                updater.load_config(config_path)
+
+    def test_rejects_local_source_outside_config_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "rules.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "services": [
+                            {
+                                "name": "Unsafe",
+                                "output": "rule/Unsafe.list",
+                                "header": "unsafe",
+                                "sources": [
+                                    {
+                                        "name": "unsafe local",
+                                        "path": "../Unsafe.list",
+                                        "format": "local-loon-list",
+                                        "min_rules": 1,
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(updater.UpdateError, "config/.*list path"):
                 updater.load_config(config_path)
 
 
