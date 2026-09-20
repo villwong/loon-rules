@@ -1,6 +1,142 @@
 {
   "services": [
     {
+      "name": "Apple",
+      "output": "rule/Apple.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7 Apple",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple.list",
+          "format": "loon-list",
+          "min_rules": 40
+        },
+        {
+          "name": "Blackmatrix7 Apple Domain",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple_Domain.list",
+          "format": "loon-domain-set",
+          "min_rules": 1500
+        },
+        {
+          "name": "Blackmatrix7 Apple Resolve",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple_Resolve.list",
+          "format": "loon-list",
+          "min_rules": 40
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/apple",
+          "format": "v2fly-domain-list",
+          "min_rules": 800
+        }
+      ]
+    },
+    {
+      "name": "ApplePush",
+      "output": "rule/ApplePush.list",
+      "header": "Apple Push Notification Service（APNs）精准规则",
+      "sources": [
+        {
+          "name": "Apple APNs audited supplement",
+          "path": "config/supplements/ApplePush.list",
+          "format": "local-loon-list",
+          "min_rules": 15
+        }
+      ]
+    },
+    {
+      "name": "IPQuery",
+      "output": "rule/ip-query.list",
+      "header": "自动合并 v2fly IP 地理检测分类 + 本地严格审核补充",
+      "sort_rules": true,
+      "domain_only": true,
+      "collapse_domain_types": true,
+      "sources": [
+        {
+          "name": "v2fly category-ip-geo-detect",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/category-ip-geo-detect",
+          "format": "v2fly-domain-list",
+          "min_rules": 200
+        },
+        {
+          "name": "Audited IP query supplement",
+          "path": "config/supplements/IPQuery.list",
+          "format": "local-loon-list",
+          "min_rules": 14,
+          "include_types": [
+            "DOMAIN",
+            "DOMAIN-SUFFIX"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TikTok",
+      "output": "rule/TikTok.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/TikTok/TikTok.list",
+          "format": "loon-list",
+          "min_rules": 30
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/tiktok",
+          "format": "v2fly-domain-list",
+          "min_rules": 30
+        }
+      ]
+    },
+    {
+      "name": "ChinaMax",
+      "output": "rule/ChinaMax.list",
+      "header": "自动合并 Blackmatrix7 主规则 + 域名规则 + Resolve 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 ChinaMax",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/ChinaMax/ChinaMax.list",
+          "format": "loon-list",
+          "min_rules": 12000
+        },
+        {
+          "name": "Blackmatrix7 ChinaMax Domain",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/ChinaMax/ChinaMax_Domain.list",
+          "format": "loon-domain-set",
+          "min_rules": 100000
+        },
+        {
+          "name": "Blackmatrix7 ChinaMax Resolve",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/ChinaMax/ChinaMax_Resolve.list",
+          "format": "loon-list",
+          "min_rules": 12000
+        }
+      ]
+    },
+    {
+      "name": "GoogleVoice",
+      "output": "rule/GoogleVoice.list",
+      "header": "自动合并自 Blackmatrix7 + Google 官方资料审核补充",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/GoogleVoice/GoogleVoice.list",
+          "format": "loon-list",
+          "min_rules": 1
+        },
+        {
+          "name": "Google Voice audited supplement",
+          "path": "config/supplements/GoogleVoice.list",
+          "format": "local-loon-list",
+          "min_rules": 3,
+          "include_types": [
+            "DOMAIN"
+          ]
+        }
+      ]
+    },
+    {
       "name": "YouTube",
       "output": "rule/YouTube.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
@@ -15,6 +151,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -47,6 +184,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -74,6 +212,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -88,6 +227,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -115,6 +255,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -129,6 +270,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -156,6 +298,7 @@
             "DOMAIN-SUFFIX",
             "DOMAIN-KEYWORD",
             "USER-AGENT",
+            "IP-ASN",
             "IP-CIDR",
             "IP-CIDR6"
           ]
@@ -301,10 +444,41 @@
           "min_rules": 25
         },
         {
+          "name": "Blackmatrix7 Resolve",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Twitter/Twitter_Resolve.list",
+          "format": "loon-list",
+          "min_rules": 25
+        },
+        {
           "name": "v2fly",
           "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/twitter",
           "format": "v2fly-domain-list",
           "min_rules": 20
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp",
+      "output": "rule/WhatsApp.list",
+      "header": "自动合并自 v2fly + Blackmatrix7",
+      "sources": [
+        {
+          "name": "Blackmatrix7",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Whatsapp/Whatsapp.list",
+          "format": "loon-list",
+          "min_rules": 15
+        },
+        {
+          "name": "Blackmatrix7 Resolve",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Whatsapp/Whatsapp_Resolve.list",
+          "format": "loon-list",
+          "min_rules": 15
+        },
+        {
+          "name": "v2fly",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/whatsapp",
+          "format": "v2fly-domain-list",
+          "min_rules": 10
         }
       ]
     },
@@ -369,6 +543,23 @@
       "name": "Microsoft",
       "output": "rule/Microsoft.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
+      "exclude_includes": [
+        "github"
+      ],
+      "exclude_sources": [
+        {
+          "name": "Blackmatrix7 GitHub boundary",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/GitHub/GitHub.list",
+          "format": "loon-list",
+          "min_rules": 25
+        },
+        {
+          "name": "v2fly GitHub boundary",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/github",
+          "format": "v2fly-domain-list",
+          "min_rules": 50
+        }
+      ],
       "sources": [
         {
           "name": "Blackmatrix7",
