@@ -1,0 +1,6 @@
+# Google Voice-only endpoints confirmed by Google-owned documentation.
+# https://support.google.com/voice/
+# https://knowledge.workspace.google.com/admin/voice/troubleshoot-sip-link
+DOMAIN,voice.google.com
+DOMAIN,lens.voice.google.com
+DOMAIN,siplink.telephony.goog

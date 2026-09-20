@@ -28,6 +28,7 @@ SUPPORTED_LOON_TYPES = {
     "DOMAIN-SUFFIX",
     "DOMAIN-KEYWORD",
     "USER-AGENT",
+    "IP-ASN",
     "IP-CIDR",
     "IP-CIDR6",
 }
@@ -37,7 +38,12 @@ V2FLY_TYPE_MAP = {
     "full": "DOMAIN",
     "keyword": "DOMAIN-KEYWORD",
 }
-SUPPORTED_FORMATS = {"loon-list", "v2fly-domain-list"}
+SUPPORTED_FORMATS = {
+    "local-loon-list",
+    "loon-domain-set",
+    "loon-list",
+    "v2fly-domain-list",
+}
 V2FLY_INCLUDE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._!@+-]*$")
 
 UPDATED_PREFIX = "# 自动更新时间: "
@@ -74,6 +80,7 @@ class SourceConfig:
     format_name: str
     min_rules: int
     include_types: tuple[str, ...] = ()
+    local_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -83,6 +90,10 @@ class ServiceConfig:
     header: str
     sources: tuple[SourceConfig, ...]
     exclude_includes: tuple[str, ...] = ()
+    sort_rules: bool = False
+    domain_only: bool = False
+    collapse_domain_types: bool = False
+    exclude_sources: tuple[SourceConfig, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -91,6 +102,7 @@ class PreparedService:
     output_path: Path
     rules: tuple[str, ...]
     source_counts: tuple[tuple[str, int], ...]
+    excluded_rules: int = 0
 
 
 def download_text(url: str, attempts: int = 3, timeout: int = 30) -> str:
@@ -396,11 +408,37 @@ def parse_loon(text: str, include_types: Iterable[str]) -> list[str]:
     return rules
 
 
+def parse_loon_domain_set(text: str) -> list[str]:
+    """Convert a Loon domain-set file to explicit DOMAIN rules."""
+    rules: list[str] = []
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        if "," in line or any(character.isspace() for character in line):
+            raise UpdateError(f"invalid Loon domain-set entry: {raw_line!r}")
+
+        if line.startswith("."):
+            value = line[1:]
+            rule_type = "DOMAIN-SUFFIX"
+        else:
+            value = line
+            rule_type = "DOMAIN"
+        if not value:
+            raise UpdateError(f"empty Loon domain-set entry: {raw_line!r}")
+        rules.append(f"{rule_type},{value.lower()}")
+
+    return deduplicate(rules)
+
+
 def parse_source(source: SourceConfig, text: str) -> list[str]:
     if source.format_name == "v2fly-domain-list":
         return parse_v2fly(text)
-    if source.format_name == "loon-list":
+    if source.format_name in {"local-loon-list", "loon-list"}:
         return parse_loon(text, source.include_types)
+    if source.format_name == "loon-domain-set":
+        return parse_loon_domain_set(text)
     raise UpdateError(f"unsupported source format: {source.format_name}")
 
 
@@ -428,6 +466,92 @@ def deduplicate(rules: Iterable[str]) -> list[str]:
     return unique
 
 
+DOMAIN_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+
+
+def normalize_domain(value: str, require_dot: bool = False) -> str | None:
+    """Return a normalized ASCII domain, or None for an unsafe value."""
+    domain = value.strip().casefold()
+    if (
+        not domain
+        or len(domain) > 253
+        or domain.startswith(".")
+        or domain.endswith(".")
+        or ".." in domain
+        or (require_dot and "." not in domain)
+    ):
+        return None
+    labels = domain.split(".")
+    if any(not DOMAIN_LABEL.fullmatch(label) for label in labels):
+        return None
+    return domain
+
+
+def filter_service_rules(
+    service: ServiceConfig,
+    rules: Iterable[str],
+) -> list[str]:
+    """Apply strict, service-specific validation before count checks."""
+    if not service.domain_only:
+        return deduplicate(rules)
+
+    filtered: list[str] = []
+    for rule in rules:
+        fields = [field.strip() for field in rule.split(",")]
+        rule_type = fields[0].upper() if fields else ""
+        if rule_type not in {"DOMAIN", "DOMAIN-SUFFIX"} or len(fields) != 2:
+            print(
+                f"Skipping non-domain rule for {service.name}: {rule}",
+                file=sys.stderr,
+            )
+            continue
+        domain = normalize_domain(fields[1], require_dot=True)
+        if domain is None:
+            print(
+                f"Skipping invalid domain for {service.name}: {fields[1]!r}",
+                file=sys.stderr,
+            )
+            continue
+        filtered.append(f"{rule_type},{domain}")
+    return deduplicate(filtered)
+
+
+def finalize_service_rules(
+    service: ServiceConfig,
+    rules: Iterable[str],
+) -> list[str]:
+    """Deduplicate, collapse safe domain overlaps, and optionally sort."""
+    finalized = filter_service_rules(service, rules)
+
+    if service.collapse_domain_types:
+        suffixes = {
+            fields[1]
+            for rule in finalized
+            if (fields := rule_key(rule))[0] == "DOMAIN-SUFFIX"
+            and len(fields) > 1
+        }
+        finalized = [
+            rule
+            for rule in finalized
+            if not (
+                (fields := rule_key(rule))[0] == "DOMAIN"
+                and len(fields) > 1
+                and fields[1] in suffixes
+            )
+        ]
+
+    if service.sort_rules:
+        type_order = {"DOMAIN-SUFFIX": 0, "DOMAIN": 1}
+        finalized.sort(
+            key=lambda rule: (
+                rule_key(rule)[1] if len(rule_key(rule)) > 1 else "",
+                type_order.get(rule_key(rule)[0], 99),
+                rule_key(rule),
+            )
+        )
+    return finalized
+
+
 def _required_string(data: dict[str, Any], key: str, context: str) -> str:
     value = data.get(key)
     if not isinstance(value, str) or not value.strip():
@@ -435,17 +559,23 @@ def _required_string(data: dict[str, Any], key: str, context: str) -> str:
     return value.strip()
 
 
+def _optional_bool(
+    data: dict[str, Any], key: str, context: str, default: bool = False
+) -> bool:
+    value = data.get(key, default)
+    if not isinstance(value, bool):
+        raise UpdateError(f"{context}.{key} must be a boolean")
+    return value
+
+
 def _parse_source(data: Any, context: str) -> SourceConfig:
     if not isinstance(data, dict):
         raise UpdateError(f"{context} must be an object")
 
     name = _required_string(data, "name", context)
-    url = _required_string(data, "url", context)
     format_name = _required_string(data, "format", context)
     min_rules = data.get("min_rules")
 
-    if not url.startswith("https://"):
-        raise UpdateError(f"{context}.url must use HTTPS")
     if format_name not in SUPPORTED_FORMATS:
         raise UpdateError(
             f"{context}.format must be one of {sorted(SUPPORTED_FORMATS)}"
@@ -466,7 +596,34 @@ def _parse_source(data: Any, context: str) -> SourceConfig:
             f"{sorted(unsupported_types)}"
         )
 
-    return SourceConfig(name, url, format_name, min_rules, include_types)
+    local_path: Path | None = None
+    if format_name == "local-loon-list":
+        path_text = _required_string(data, "path", context)
+        local_path = Path(path_text)
+        if (
+            local_path.is_absolute()
+            or ".." in local_path.parts
+            or not local_path.parts
+            or local_path.parts[0] != "config"
+            or local_path.suffix != ".list"
+        ):
+            raise UpdateError(
+                f"{context}.path must be a safe config/*.list path"
+            )
+        url = ""
+    else:
+        url = _required_string(data, "url", context)
+        if not url.startswith("https://"):
+            raise UpdateError(f"{context}.url must use HTTPS")
+
+    return SourceConfig(
+        name,
+        url,
+        format_name,
+        min_rules,
+        include_types,
+        local_path,
+    )
 
 
 def load_config(path: Path) -> tuple[ServiceConfig, ...]:
@@ -518,6 +675,17 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
             for source_index, source in enumerate(raw_sources)
         )
 
+        raw_exclude_sources = raw_service.get("exclude_sources", [])
+        if not isinstance(raw_exclude_sources, list):
+            raise UpdateError(f"{context}.exclude_sources must be a list")
+        exclude_sources = tuple(
+            _parse_source(
+                source,
+                f"{context}.exclude_sources[{source_index}]",
+            )
+            for source_index, source in enumerate(raw_exclude_sources)
+        )
+
         raw_excludes = raw_service.get("exclude_includes", [])
         if not isinstance(raw_excludes, list) or not all(
             isinstance(item, str) and item.strip() for item in raw_excludes
@@ -542,7 +710,17 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
                 exclude_includes.append(include_name)
 
         services.append(
-            ServiceConfig(name, output, header, sources, tuple(exclude_includes))
+            ServiceConfig(
+                name,
+                output,
+                header,
+                sources,
+                tuple(exclude_includes),
+                _optional_bool(raw_service, "sort_rules", context),
+                _optional_bool(raw_service, "domain_only", context),
+                _optional_bool(raw_service, "collapse_domain_types", context),
+                exclude_sources,
+            )
         )
 
     return tuple(services)
@@ -558,6 +736,20 @@ def resolve_output(repository_root: Path, relative_path: Path) -> Path:
     return output_path
 
 
+def read_local_source(repository_root: Path, relative_path: Path) -> str:
+    """Read a validated repository-local supplemental rule source."""
+    root = repository_root.resolve()
+    source_path = (root / relative_path).resolve()
+    try:
+        source_path.relative_to(root)
+    except ValueError as exc:
+        raise UpdateError(f"local source escapes repository root: {relative_path}") from exc
+    try:
+        return source_path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise UpdateError(f"failed to read local source {relative_path}: {exc}") from exc
+
+
 def prepare_services(
     services: Iterable[ServiceConfig],
     repository_root: Path,
@@ -570,32 +762,60 @@ def prepare_services(
         tuple[str, frozenset[str]], tuple[V2flyEntry, ...]
     ] = {}
 
+    def load_source_rules(
+        service: ServiceConfig,
+        source: SourceConfig,
+        exclude_includes: Iterable[str],
+    ) -> list[str]:
+        if source.format_name == "local-loon-list":
+            if source.local_path is None:
+                raise UpdateError(f"{service.name}/{source.name} has no local path")
+            rules = parse_source(
+                source,
+                read_local_source(repository_root, source.local_path),
+            )
+        elif source.format_name == "v2fly-domain-list":
+            rules = expand_v2fly_source(
+                source.url,
+                fetcher,
+                download_cache,
+                expansion_cache,
+                exclude_includes,
+            )
+        else:
+            if source.url not in download_cache:
+                download_cache[source.url] = fetcher(source.url)
+            rules = parse_source(source, download_cache[source.url])
+
+        rules = filter_service_rules(service, rules)
+        if len(rules) < source.min_rules:
+            raise UpdateError(
+                f"{service.name}/{source.name} yielded only {len(rules)} rules; "
+                f"expected at least {source.min_rules}"
+            )
+        return rules
+
     for service in services:
         merged: list[str] = []
         source_counts: list[tuple[str, int]] = []
 
         for source in service.sources:
-            if source.format_name == "v2fly-domain-list":
-                rules = expand_v2fly_source(
-                    source.url,
-                    fetcher,
-                    download_cache,
-                    expansion_cache,
-                    service.exclude_includes,
-                )
-            else:
-                if source.url not in download_cache:
-                    download_cache[source.url] = fetcher(source.url)
-                rules = parse_source(source, download_cache[source.url])
-            if len(rules) < source.min_rules:
-                raise UpdateError(
-                    f"{service.name}/{source.name} yielded only {len(rules)} rules; "
-                    f"expected at least {source.min_rules}"
-                )
+            rules = load_source_rules(service, source, service.exclude_includes)
             merged.extend(rules)
             source_counts.append((source.name, len(rules)))
 
-        unique_rules = deduplicate(merged)
+        excluded_keys: set[tuple[str, ...]] = set()
+        for source in service.exclude_sources:
+            excluded_keys.update(
+                rule_key(rule)
+                for rule in load_source_rules(service, source, ())
+            )
+        retained = [
+            rule for rule in merged if rule_key(rule) not in excluded_keys
+        ]
+        excluded_count = len(merged) - len(retained)
+
+        unique_rules = finalize_service_rules(service, retained)
         if not unique_rules:
             raise UpdateError(f"{service.name} merged rule set is empty")
         prepared.append(
@@ -604,6 +824,7 @@ def prepare_services(
                 output_path=resolve_output(repository_root, service.output),
                 rules=tuple(unique_rules),
                 source_counts=tuple(source_counts),
+                excluded_rules=excluded_count,
             )
         )
 
@@ -699,9 +920,14 @@ def update_all(
         counts = ", ".join(
             f"{name}={count}" for name, count in prepared.source_counts
         )
+        boundary_note = (
+            f", boundary-excluded={prepared.excluded_rules}"
+            if prepared.excluded_rules
+            else ""
+        )
         print(
             f"{prepared.service.name}: updated {path} with "
-            f"{len(prepared.rules)} rules ({counts}, before dedup)"
+            f"{len(prepared.rules)} rules ({counts}{boundary_note}, before dedup)"
         )
         changed.append(path)
 

@@ -1,0 +1,16 @@
+# Strictly audited IP / DNS / WebRTC leak-check sites not present in v2fly.
+# Do not add generic speed tests, VPN homepages, CDNs, or proxy vendors.
+DOMAIN-SUFFIX,abuseipdb.com
+DOMAIN-SUFFIX,dnsleak.com
+DOMAIN-SUFFIX,ip.check.place
+DOMAIN-SUFFIX,ip.skk.moe
+DOMAIN-SUFFIX,ip234.in
+DOMAIN-SUFFIX,ip2proxy.com
+DOMAIN-SUFFIX,ipconfig.io
+DOMAIN-SUFFIX,iphey.com
+DOMAIN-SUFFIX,ipjiance.com
+DOMAIN-SUFFIX,ippure.com
+DOMAIN-SUFFIX,ping0.cc
+DOMAIN-SUFFIX,pixelscan.net
+DOMAIN-SUFFIX,scamalytics.com
+DOMAIN-SUFFIX,spamhaus.org
