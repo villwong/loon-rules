@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-03 14:03:33 UTC
-# 总规则数: 45
+# 自动更新时间: 2026-09-20 17:51:35 UTC
+# 总规则数: 46
 
 DOMAIN,browser-intake-datadoghq.com
 DOMAIN,chat.openai.com.cdn.cloudflare.net
@@ -34,6 +34,7 @@ DOMAIN-SUFFIX,sentry.io
 DOMAIN-SUFFIX,stripe.com
 DOMAIN-SUFFIX,turn.livekit.cloud
 DOMAIN-KEYWORD,openai
+IP-ASN,20473,no-resolve
 IP-CIDR,24.199.123.28/32,no-resolve
 IP-CIDR,64.23.132.171/32,no-resolve
 DOMAIN-SUFFIX,chat.com
