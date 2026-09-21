@@ -1,5 +1,5 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-21 15:12:46 UTC
+# 自动更新时间: 2026-09-21 21:39:22 UTC
 # 总规则数: 1920
 
 DOMAIN-KEYWORD,apple-support.akadns.net
@@ -28,9 +28,9 @@ USER-AGENT,locationd*
 USER-AGENT,passd*
 USER-AGENT,Music*
 USER-AGENT,AppleNews*
+USER-AGENT,AppleTV*
 USER-AGENT,com.apple.news*
 USER-AGENT,com.apple.trustd*
-USER-AGENT,AppleTV*
 USER-AGENT,com.apple.tv*
 IP-CIDR,139.178.128.0/18,no-resolve
 IP-CIDR,144.178.0.0/19,no-resolve
