@@ -40,7 +40,7 @@ jobs:
       - name: Commit and push changes
         shell: bash
         run: |
-          git add -- rule apple.list apple-push.list ip-query.list TikTok-new.list
+          git add -- rule
           if git diff --cached --quiet; then
             echo "All configured rules are already up to date."
             exit 0

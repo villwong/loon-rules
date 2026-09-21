@@ -95,8 +95,6 @@ YouTube → YouTube 策略
 Google  → Google 默认策略
 ```
 
-旧的 `apple.list`、`apple-push.list`、`TikTok-new.list` 和根目录 `ip-query.list` 地址继续保留，并自动同步到对应的新规则文件。新配置建议使用 `rule/` 下的地址。
-
 ## 数据来源
 
 - [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community)

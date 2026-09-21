@@ -1438,18 +1438,10 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertIn("IP-CIDR6,2001:db8::/32,no-resolve", merged)
         self.assertFalse(any("@cn" in rule or "@ads" in rule for rule in merged))
 
-    def test_legacy_root_rule_urls_are_kept_as_compatibility_aliases(self) -> None:
+    def test_repository_has_no_root_level_rule_aliases(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
-        for service in services:
-            primary = updater.REPOSITORY_ROOT / service.output
-            for alias in service.aliases:
-                with self.subTest(service=service.name, alias=alias):
-                    alias_path = updater.REPOSITORY_ROOT / alias
-                    self.assertTrue(alias_path.is_file())
-                    self.assertEqual(
-                        alias_path.read_bytes(),
-                        primary.read_bytes(),
-                    )
+        self.assertTrue(all(not service.aliases for service in services))
+        self.assertEqual(list(updater.REPOSITORY_ROOT.glob("*.list")), [])
 
     def test_config_outputs_exactly_match_rule_directory(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
@@ -1546,10 +1538,10 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertIn("python -m unittest discover -s tests -v", workflow)
         self.assertIn("python scripts/update_rules.py", workflow)
         self.assertIn("git add -- rule", workflow)
-        self.assertIn("apple.list", workflow)
-        self.assertIn("apple-push.list", workflow)
-        self.assertIn("ip-query.list", workflow)
-        self.assertIn("TikTok-new.list", workflow)
+        self.assertNotIn("apple.list", workflow)
+        self.assertNotIn("apple-push.list", workflow)
+        self.assertNotIn("ip-query.list", workflow)
+        self.assertNotIn("TikTok-new.list", workflow)
         self.assertIn("git diff --cached --quiet", workflow)
 
     def test_rejects_output_outside_rule_directory(self) -> None:

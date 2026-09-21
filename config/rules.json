@@ -4,9 +4,6 @@
       "name": "Apple",
       "output": "rule/Apple.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
-      "aliases": [
-        "apple.list"
-      ],
       "include_services": [
         "ApplePush",
         "AppStore",
@@ -49,9 +46,6 @@
       "name": "ApplePush",
       "output": "rule/ApplePush.list",
       "header": "Apple Push Notification Service（APNs）精准规则",
-      "aliases": [
-        "apple-push.list"
-      ],
       "sources": [
         {
           "name": "Apple APNs audited supplement",
@@ -205,9 +199,6 @@
       "name": "IPQuery",
       "output": "rule/ip-query.list",
       "header": "自动合并 v2fly IP 地理检测分类 + 本地严格审核补充",
-      "aliases": [
-        "ip-query.list"
-      ],
       "sort_rules": true,
       "domain_only": true,
       "collapse_domain_types": true,
@@ -234,9 +225,6 @@
       "name": "TikTok",
       "output": "rule/TikTok.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
-      "aliases": [
-        "TikTok-new.list"
-      ],
       "sources": [
         {
           "name": "Blackmatrix7",
