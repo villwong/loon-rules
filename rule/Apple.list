@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-21 14:26:20 UTC
-# 总规则数: 1919
+# 自动更新时间: 2026-09-21 15:12:46 UTC
+# 总规则数: 1920
 
 DOMAIN-KEYWORD,apple-support.akadns.net
 DOMAIN-KEYWORD,apple.com.akadns.net
@@ -1880,6 +1880,7 @@ IP-CIDR6,2403:300:a42::/48,no-resolve
 IP-CIDR6,2403:300:a51::/48,no-resolve
 IP-CIDR6,2a01:b740:a42::/48,no-resolve
 DOMAIN,apps.apple.com
+DOMAIN-SUFFIX,apps.apple.com
 DOMAIN-SUFFIX,gc.apple.com
 DOMAIN-SUFFIX,icloud.apple.com
 DOMAIN-SUFFIX,iwork.apple.com

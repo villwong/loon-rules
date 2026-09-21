@@ -3,6 +3,7 @@
 # https://knowledge.workspace.google.com/admin/voice/troubleshoot-sip-link
 DOMAIN,voice.google.com
 DOMAIN,lens.voice.google.com
+DOMAIN-SUFFIX,voice.google.com
 DOMAIN,siplink.telephony.goog
 DOMAIN,voice.telephony.goog
 DOMAIN-SUFFIX,telephony.goog

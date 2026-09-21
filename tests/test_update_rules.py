@@ -1243,6 +1243,28 @@ class RuleUpdaterTests(unittest.TestCase):
                 "IP-CIDR,17.249.0.0/16,no-resolve",
                 "IP-CIDR6,2620:149:a44::/48,no-resolve",
             },
+            "AppStore": {
+                "DOMAIN-SUFFIX,apps.apple.com",
+                "DOMAIN,apps.mzstatic.com",
+                "DOMAIN,downloaddispatch.itunes.apple.com",
+                "DOMAIN,iosapps.itunes.g.aaplimg.com",
+                "DOMAIN,osxapps.itunes.g.aaplimg.com",
+            },
+            "AppleNews": {
+                "DOMAIN,news-client-search.apple.com",
+                "DOMAIN-SUFFIX,apple.news",
+            },
+            "Siri": {
+                "DOMAIN,guzzoni.apple.com",
+                "DOMAIN,guzzoni.smoot.apple.com",
+                "DOMAIN,probe.siri.apple.com",
+                "DOMAIN,seed.siri.apple.com",
+            },
+            "TestFlight": {
+                "DOMAIN,beta.apple.com",
+                "DOMAIN,testflight.apple.com",
+                "DOMAIN-KEYWORD,testflight",
+            },
             "ip-query": {
                 "DOMAIN-SUFFIX,ip.sb",
                 "DOMAIN-SUFFIX,ipinfo.io",
@@ -1270,6 +1292,7 @@ class RuleUpdaterTests(unittest.TestCase):
                 "DOMAIN,lens.l.google.com",
                 "DOMAIN,voice.google.com",
                 "DOMAIN,lens.voice.google.com",
+                "DOMAIN-SUFFIX,voice.google.com",
                 "DOMAIN,siplink.telephony.goog",
             },
             "WhatsApp": {"DOMAIN-SUFFIX,whatsapp.com"},

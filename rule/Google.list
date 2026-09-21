@@ -1,6 +1,6 @@
 # Google 全生态规则，自动合并总表与子表
-# 自动更新时间: 2026-09-21 14:26:20 UTC
-# 总规则数: 1125
+# 自动更新时间: 2026-09-21 15:12:46 UTC
+# 总规则数: 1126
 
 DOMAIN,voice.telephony.goog
 DOMAIN-SUFFIX,0emm.com
@@ -1120,6 +1120,7 @@ DOMAIN,photoslibrary.googleapis.com
 DOMAIN,lens.l.google.com
 DOMAIN,voice.google.com
 DOMAIN,lens.voice.google.com
+DOMAIN-SUFFIX,voice.google.com
 DOMAIN,siplink.telephony.goog
 DOMAIN-SUFFIX,telephony.goog
 DOMAIN-SUFFIX,play-fe.googleapis.com

@@ -1,8 +1,4 @@
-# Siri 规则
-# 自动更新时间: 2026-09-21 15:12:46 UTC
-# 总规则数: 6
-
-DOMAIN,guzzoni.apple.com
+# Siri-only endpoints explicitly listed in v2fly data/apple.
 DOMAIN,guzzoni.smoot.apple.com
 DOMAIN,probe.siri.apple.com
 DOMAIN,seed-sequoia.siri.apple.com

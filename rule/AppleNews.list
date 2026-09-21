@@ -1,6 +1,7 @@
 # Apple News 规则
-# 自动更新时间: 2026-09-21 14:26:20 UTC
-# 总规则数: 2
+# 自动更新时间: 2026-09-21 15:12:46 UTC
+# 总规则数: 3
 
 DOMAIN,gspe1-ssl.ls.apple.com
 DOMAIN,news-client-search.apple.com
+DOMAIN-SUFFIX,apple.news
