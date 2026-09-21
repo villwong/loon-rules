@@ -1,0 +1,13 @@
+# Google Drive、Docs 文件访问与 Google Photos 规则
+# 自动更新时间: 2026-09-21 14:26:20 UTC
+# 总规则数: 9
+
+DOMAIN-SUFFIX,docs.google.com
+DOMAIN-SUFFIX,drive.google.com
+DOMAIN-SUFFIX,googledrive.com
+USER-AGENT,%E4%BA%91%E7%AB%AF%E7%A1%AC%E7%9B%98*
+USER-AGENT,*com.google.Drive*
+USER-AGENT,Google.Drive*
+DOMAIN-SUFFIX,photos.google.com
+DOMAIN-SUFFIX,googlephotos.com
+DOMAIN,photoslibrary.googleapis.com

@@ -1,0 +1,7 @@
+# TestFlight 规则
+# 自动更新时间: 2026-09-21 14:26:20 UTC
+# 总规则数: 3
+
+DOMAIN,beta.apple.com
+DOMAIN,testflight.apple.com
+DOMAIN-KEYWORD,testflight

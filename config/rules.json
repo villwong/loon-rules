@@ -4,6 +4,20 @@
       "name": "Apple",
       "output": "rule/Apple.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
+      "aliases": [
+        "apple.list"
+      ],
+      "include_services": [
+        "ApplePush",
+        "AppStore",
+        "iCloud",
+        "AppleMusic",
+        "AppleTV",
+        "AppleNews",
+        "Siri",
+        "TestFlight",
+        "AppleProxy"
+      ],
       "sources": [
         {
           "name": "Blackmatrix7 Apple",
@@ -35,6 +49,9 @@
       "name": "ApplePush",
       "output": "rule/ApplePush.list",
       "header": "Apple Push Notification Service（APNs）精准规则",
+      "aliases": [
+        "apple-push.list"
+      ],
       "sources": [
         {
           "name": "Apple APNs audited supplement",
@@ -45,9 +62,152 @@
       ]
     },
     {
+      "name": "AppStore",
+      "output": "rule/AppStore.list",
+      "header": "App Store 与应用下载更新规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 AppStore",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/AppStore/AppStore.list",
+          "format": "loon-list",
+          "min_rules": 2
+        }
+      ]
+    },
+    {
+      "name": "iCloud",
+      "output": "rule/iCloud.list",
+      "header": "自动合并 iCloud 与 iCloud Drive/Photos 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 iCloud",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/iCloud/iCloud.list",
+          "format": "loon-list",
+          "min_rules": 50
+        },
+        {
+          "name": "v2fly iCloud",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/icloud",
+          "format": "v2fly-domain-list",
+          "min_rules": 45
+        }
+      ]
+    },
+    {
+      "name": "AppleMusic",
+      "output": "rule/AppleMusic.list",
+      "header": "自动合并 Apple Music 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 AppleMusic",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/AppleMusic/AppleMusic.list",
+          "format": "loon-list",
+          "min_rules": 8
+        },
+        {
+          "name": "v2fly apple-music",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/apple-music",
+          "format": "v2fly-domain-list",
+          "min_rules": 12
+        }
+      ]
+    },
+    {
+      "name": "AppleTV",
+      "output": "rule/AppleTV.list",
+      "header": "自动合并 Apple TV 与 Apple TV+ 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 AppleTV",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/AppleTV/AppleTV.list",
+          "format": "loon-list",
+          "min_rules": 8
+        },
+        {
+          "name": "v2fly apple-tvplus",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/apple-tvplus",
+          "format": "v2fly-domain-list",
+          "min_rules": 6
+        }
+      ]
+    },
+    {
+      "name": "AppleNews",
+      "output": "rule/AppleNews.list",
+      "header": "Apple News 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 AppleNews",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/AppleNews/AppleNews.list",
+          "format": "loon-list",
+          "min_rules": 2
+        }
+      ]
+    },
+    {
+      "name": "Siri",
+      "output": "rule/Siri.list",
+      "header": "Siri 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 Siri",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Siri/Siri.list",
+          "format": "loon-list",
+          "min_rules": 1
+        }
+      ]
+    },
+    {
+      "name": "TestFlight",
+      "output": "rule/TestFlight.list",
+      "header": "TestFlight 规则",
+      "sources": [
+        {
+          "name": "Blackmatrix7 TestFlight",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/TestFlight/TestFlight.list",
+          "format": "loon-list",
+          "min_rules": 3
+        }
+      ]
+    },
+    {
+      "name": "AppleProxy",
+      "output": "rule/AppleProxy.list",
+      "header": "通常需要境外网络访问的 Apple 服务聚合规则",
+      "include_services": [
+        "AppleTV",
+        "AppleNews"
+      ],
+      "exclude_sources": [
+        {
+          "name": "AppleProxy non-proxy boundary",
+          "path": "config/supplements/AppleProxyExcluded.list",
+          "format": "local-loon-list",
+          "min_rules": 8
+        }
+      ],
+      "sources": [
+        {
+          "name": "Blackmatrix7 AppleProxy",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/AppleProxy/AppleProxy.list",
+          "format": "loon-list",
+          "min_rules": 35
+        },
+        {
+          "name": "Blackmatrix7 iCloud Private Relay",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/iCloudPrivateRelay/iCloudPrivateRelay.list",
+          "format": "loon-list",
+          "min_rules": 5
+        }
+      ]
+    },
+    {
       "name": "IPQuery",
       "output": "rule/ip-query.list",
       "header": "自动合并 v2fly IP 地理检测分类 + 本地严格审核补充",
+      "aliases": [
+        "ip-query.list"
+      ],
       "sort_rules": true,
       "domain_only": true,
       "collapse_domain_types": true,
@@ -74,6 +234,9 @@
       "name": "TikTok",
       "output": "rule/TikTok.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
+      "aliases": [
+        "TikTok-new.list"
+      ],
       "sources": [
         {
           "name": "Blackmatrix7",
@@ -129,17 +292,58 @@
           "name": "Google Voice audited supplement",
           "path": "config/supplements/GoogleVoice.list",
           "format": "local-loon-list",
-          "min_rules": 3,
+          "min_rules": 5,
           "include_types": [
-            "DOMAIN"
+            "DOMAIN",
+            "DOMAIN-SUFFIX"
           ]
+        }
+      ]
+    },
+    {
+      "name": "GoogleDrive",
+      "output": "rule/GoogleDrive.list",
+      "header": "Google Drive、Docs 文件访问与 Google Photos 规则",
+      "exclude_sources": [
+        {
+          "name": "GoogleDrive broad shared-domain boundary",
+          "path": "config/supplements/GoogleDriveExcluded.list",
+          "format": "local-loon-list",
+          "min_rules": 2
+        }
+      ],
+      "sources": [
+        {
+          "name": "Blackmatrix7 GoogleDrive",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/GoogleDrive/GoogleDrive.list",
+          "format": "loon-list",
+          "min_rules": 8
+        },
+        {
+          "name": "Audited Google Drive and Photos supplement",
+          "path": "config/supplements/GoogleDrive.list",
+          "format": "local-loon-list",
+          "min_rules": 3
+        }
+      ]
+    },
+    {
+      "name": "GooglePlay",
+      "output": "rule/GooglePlay.list",
+      "header": "Google Play 与 Android 应用服务规则",
+      "sources": [
+        {
+          "name": "v2fly google-play",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google-play",
+          "format": "v2fly-domain-list",
+          "min_rules": 8
         }
       ]
     },
     {
       "name": "YouTube",
       "output": "rule/YouTube.list",
-      "header": "自动合并自 v2fly + Blackmatrix7",
+      "header": "自动合并 YouTube 与 YouTube Music 规则",
       "sources": [
         {
           "name": "Blackmatrix7",
@@ -157,6 +361,12 @@
           ]
         },
         {
+          "name": "Blackmatrix7 YouTubeMusic",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/YouTubeMusic/YouTubeMusic.list",
+          "format": "loon-list",
+          "min_rules": 5
+        },
+        {
           "name": "v2fly",
           "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/youtube",
           "format": "v2fly-domain-list",
@@ -167,11 +377,13 @@
     {
       "name": "Google",
       "output": "rule/Google.list",
-      "header": "自动合并自 v2fly + Blackmatrix7",
-      "exclude_includes": [
-        "youtube",
-        "google-gemini",
-        "google-deepmind"
+      "header": "Google 全生态规则，自动合并总表与子表",
+      "include_services": [
+        "Gemini",
+        "YouTube",
+        "GoogleDrive",
+        "GoogleVoice",
+        "GooglePlay"
       ],
       "sources": [
         {
@@ -234,7 +446,7 @@
         },
         {
           "name": "v2fly",
-          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google-gemini",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google-deepmind",
           "format": "v2fly-domain-list",
           "min_rules": 30
         }
@@ -458,6 +670,28 @@
       ]
     },
     {
+      "name": "Crypto",
+      "output": "rule/Crypto.list",
+      "header": "Binance、Bybit 与 OKX 聚合规则",
+      "include_services": [
+        "Binance",
+        "Bybit",
+        "OKX"
+      ],
+      "sources": []
+    },
+    {
+      "name": "AI",
+      "output": "rule/AI.list",
+      "header": "OpenAI、Anthropic 与 Gemini 聚合规则",
+      "include_services": [
+        "OpenAI",
+        "Anthropic",
+        "Gemini"
+      ],
+      "sources": []
+    },
+    {
       "name": "WhatsApp",
       "output": "rule/WhatsApp.list",
       "header": "自动合并自 v2fly + Blackmatrix7",
@@ -542,23 +776,9 @@
     {
       "name": "Microsoft",
       "output": "rule/Microsoft.list",
-      "header": "自动合并自 v2fly + Blackmatrix7",
-      "exclude_includes": [
+      "header": "Microsoft 全生态规则，包含 GitHub 子表",
+      "include_services": [
         "github"
-      ],
-      "exclude_sources": [
-        {
-          "name": "Blackmatrix7 GitHub boundary",
-          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/GitHub/GitHub.list",
-          "format": "loon-list",
-          "min_rules": 25
-        },
-        {
-          "name": "v2fly GitHub boundary",
-          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/github",
-          "format": "v2fly-domain-list",
-          "min_rules": 50
-        }
       ],
       "sources": [
         {

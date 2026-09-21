@@ -1,0 +1,5 @@
+# Google Drive and Google Photos endpoints not safely supplied by a dedicated v2fly category.
+# Keep shared googleusercontent.com and generic googleapis.com out of this child table.
+DOMAIN-SUFFIX,photos.google.com
+DOMAIN-SUFFIX,googlephotos.com
+DOMAIN,photoslibrary.googleapis.com

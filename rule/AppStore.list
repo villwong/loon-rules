@@ -1,0 +1,6 @@
+# App Store 与应用下载更新规则
+# 自动更新时间: 2026-09-21 14:26:20 UTC
+# 总规则数: 2
+
+DOMAIN,apps.apple.com
+DOMAIN,itunes.apple.com

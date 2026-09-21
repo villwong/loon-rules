@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ipaddress
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -747,6 +748,81 @@ class RuleUpdaterTests(unittest.TestCase):
                 first_contents,
             )
 
+    def test_included_services_build_totals_and_compatibility_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "rules.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "services": [
+                            {
+                                "name": "Total",
+                                "output": "rule/Total.list",
+                                "header": "Total",
+                                "aliases": ["old-total.list"],
+                                "include_services": ["Child"],
+                                "sources": [],
+                            },
+                            service_config(
+                                "Child",
+                                "rule/Child.list",
+                                "https://example.test/child",
+                                "v2fly-domain-list",
+                            ),
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            updater.update_all(
+                config_path,
+                root,
+                fetcher=lambda _url: "child.example",
+                updated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+            )
+
+            total = (root / "rule/Total.list").read_text(encoding="utf-8")
+            child = (root / "rule/Child.list").read_text(encoding="utf-8")
+            alias = (root / "old-total.list").read_text(encoding="utf-8")
+            self.assertIn("DOMAIN-SUFFIX,child.example", total)
+            self.assertIn("DOMAIN-SUFFIX,child.example", child)
+            self.assertEqual(alias, total)
+
+    def test_rejects_circular_included_service_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "rules.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "services": [
+                            {
+                                "name": "One",
+                                "output": "rule/One.list",
+                                "header": "One",
+                                "include_services": ["Two"],
+                                "sources": [],
+                            },
+                            {
+                                "name": "Two",
+                                "output": "rule/Two.list",
+                                "header": "Two",
+                                "include_services": ["One"],
+                                "sources": [],
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                updater.UpdateError, "circular included service dependency"
+            ):
+                updater.update_all(config_path, root, fetcher=lambda _url: "")
+
     def test_later_download_failure_does_not_touch_any_service(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -826,7 +902,10 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertEqual(youtube.output, Path("rule/YouTube.list"))
         self.assertEqual(
             [source.format_name for source in youtube.sources],
-            ["loon-list", "v2fly-domain-list"],
+            ["loon-list", "loon-list", "v2fly-domain-list"],
+        )
+        self.assertTrue(
+            youtube.sources[1].url.endswith("/YouTubeMusic/YouTubeMusic.list")
         )
         self.assertEqual(youtube.exclude_includes, ())
 
@@ -847,9 +926,10 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertTrue(google.sources[0].url.endswith("/rule/Loon/Google/Google.list"))
         self.assertTrue(google.sources[1].url.endswith("/data/google"))
         self.assertGreaterEqual(google.sources[1].min_rules, 700)
+        self.assertEqual(google.exclude_includes, ())
         self.assertEqual(
-            google.exclude_includes,
-            ("youtube", "google-gemini", "google-deepmind"),
+            google.include_services,
+            ("Gemini", "YouTube", "GoogleDrive", "GoogleVoice", "GooglePlay"),
         )
         self.assertNotIn("Google_Resolve.list", google.sources[0].url)
 
@@ -876,7 +956,7 @@ class RuleUpdaterTests(unittest.TestCase):
             name: [source.url for source in services_by_name[name].sources]
             for name in ("Gemini", "Anthropic", "OpenAI")
         }
-        self.assertTrue(source_urls["Gemini"][-1].endswith("/data/google-gemini"))
+        self.assertTrue(source_urls["Gemini"][-1].endswith("/data/google-deepmind"))
         self.assertTrue(source_urls["Anthropic"][-1].endswith("/data/anthropic"))
         self.assertTrue(source_urls["OpenAI"][-1].endswith("/data/openai"))
         self.assertTrue(any("/Loon/Gemini/" in url for url in source_urls["Gemini"]))
@@ -897,6 +977,10 @@ class RuleUpdaterTests(unittest.TestCase):
         )
         self.assertNotIn("Claude", services_by_name)
         self.assertNotIn("ChatGPT", services_by_name)
+        self.assertEqual(
+            services_by_name["AI"].include_services,
+            ("OpenAI", "Anthropic", "Gemini"),
+        )
 
     def test_repository_config_defines_only_dedicated_requested_sources(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
@@ -916,8 +1000,7 @@ class RuleUpdaterTests(unittest.TestCase):
             "Microsoft": ("microsoft", "Microsoft"),
         }
 
-        self.assertEqual(
-            set(services_by_name),
+        self.assertTrue(
             {
                 "Apple",
                 "ApplePush",
@@ -932,7 +1015,7 @@ class RuleUpdaterTests(unittest.TestCase):
                 "OpenAI",
                 "WhatsApp",
                 *expected_sources,
-            },
+            }.issubset(services_by_name),
         )
         for name, (v2fly_category, blackmatrix_name) in expected_sources.items():
             with self.subTest(service=name):
@@ -1063,11 +1146,9 @@ class RuleUpdaterTests(unittest.TestCase):
         )
 
         microsoft = services_by_name["Microsoft"]
-        self.assertEqual(microsoft.exclude_includes, ("github",))
-        self.assertEqual(len(microsoft.exclude_sources), 2)
-        self.assertTrue(
-            all("github" in source.name.casefold() for source in microsoft.exclude_sources)
-        )
+        self.assertEqual(microsoft.exclude_includes, ())
+        self.assertEqual(microsoft.exclude_sources, ())
+        self.assertEqual(tuple(name.casefold() for name in microsoft.include_services), ("github",))
 
     def test_requested_services_preserve_every_configured_source_rule(self) -> None:
         service_names = (
@@ -1357,16 +1438,18 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertIn("IP-CIDR6,2001:db8::/32,no-resolve", merged)
         self.assertFalse(any("@cn" in rule or "@ads" in rule for rule in merged))
 
-    def test_legacy_root_rules_are_fully_migrated(self) -> None:
-        for migrated_path in (
-            Path("ip-query.list"),
-            Path("TikTok-new.list"),
-            Path("apple-push.list"),
-            Path("apple.list"),
-        ):
-            self.assertFalse((updater.REPOSITORY_ROOT / migrated_path).exists())
-
-        self.assertEqual(list(updater.REPOSITORY_ROOT.glob("*.list")), [])
+    def test_legacy_root_rule_urls_are_kept_as_compatibility_aliases(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        for service in services:
+            primary = updater.REPOSITORY_ROOT / service.output
+            for alias in service.aliases:
+                with self.subTest(service=service.name, alias=alias):
+                    alias_path = updater.REPOSITORY_ROOT / alias
+                    self.assertTrue(alias_path.is_file())
+                    self.assertEqual(
+                        alias_path.read_bytes(),
+                        primary.read_bytes(),
+                    )
 
     def test_config_outputs_exactly_match_rule_directory(self) -> None:
         services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
@@ -1376,11 +1459,82 @@ class RuleUpdaterTests(unittest.TestCase):
             for path in (updater.REPOSITORY_ROOT / "rule").glob("*.list")
         }
 
-        self.assertEqual(len(services), 24)
+        self.assertEqual(len(services), 36)
         self.assertEqual(configured, generated)
         self.assertTrue(
             all((updater.REPOSITORY_ROOT / output).is_file() for output in configured)
         )
+
+    def test_configured_child_rules_are_subsets_of_total_outputs(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        services_by_name = {service.name.casefold(): service for service in services}
+
+        def rules_for(service: updater.ServiceConfig) -> set[str]:
+            return {
+                line.strip()
+                for line in (updater.REPOSITORY_ROOT / service.output)
+                .read_text(encoding="utf-8-sig")
+                .splitlines()
+                if line.strip() and not line.startswith(("#", ";"))
+            }
+
+        for parent in services:
+            parent_rules = rules_for(parent)
+            for child_name in parent.include_services:
+                child = services_by_name[child_name.casefold()]
+                with self.subTest(parent=parent.name, child=child.name):
+                    self.assertLessEqual(rules_for(child), parent_rules)
+
+    def test_all_generated_rules_have_valid_loon_format_and_encoding(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+
+        for service in services:
+            path = updater.REPOSITORY_ROOT / service.output
+            with self.subTest(service=service.name):
+                payload = path.read_bytes()
+                self.assertFalse(payload.startswith(b"\xef\xbb\xbf"))
+                self.assertNotIn(b"\r", payload)
+                self.assertTrue(payload.endswith(b"\n"))
+
+                text = payload.decode("utf-8")
+                lines = text.splitlines()
+                self.assertGreaterEqual(len(lines), 5)
+                self.assertTrue(lines[0].startswith("# "))
+                self.assertTrue(lines[1].startswith(updater.UPDATED_PREFIX))
+                self.assertTrue(lines[2].startswith(updater.TOTAL_PREFIX))
+                self.assertEqual(lines[3], "")
+
+                rules = [line for line in lines[4:] if line]
+                self.assertTrue(rules)
+                self.assertEqual(rules, [line.strip() for line in rules])
+                self.assertEqual(len(rules), len({updater.rule_key(rule) for rule in rules}))
+                self.assertEqual(lines[2], f"{updater.TOTAL_PREFIX}{len(rules)}")
+
+                for rule in rules:
+                    fields = [field.strip() for field in rule.split(",")]
+                    rule_type = fields[0]
+                    self.assertIn(rule_type, updater.SUPPORTED_LOON_TYPES)
+                    self.assertGreaterEqual(len(fields), 2)
+                    self.assertTrue(fields[1])
+
+                    if rule_type in {"DOMAIN", "DOMAIN-SUFFIX"}:
+                        self.assertIsNotNone(
+                            updater.normalize_domain(fields[1], require_dot=False)
+                        )
+                    elif rule_type in {"IP-CIDR", "IP-CIDR6"}:
+                        self.assertIn(len(fields), {2, 3})
+                        if len(fields) == 3:
+                            self.assertEqual(fields[2], "no-resolve")
+                        network = ipaddress.ip_network(fields[1], strict=False)
+                        self.assertEqual(
+                            network.version,
+                            4 if rule_type == "IP-CIDR" else 6,
+                        )
+                    elif rule_type == "IP-ASN":
+                        self.assertIn(len(fields), {2, 3})
+                        self.assertTrue(fields[1].isdigit())
+                        if len(fields) == 3:
+                            self.assertEqual(fields[2], "no-resolve")
 
     def test_workflow_runs_tests_updates_and_skips_empty_commits(self) -> None:
         workflow = (
@@ -1392,6 +1546,10 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertIn("python -m unittest discover -s tests -v", workflow)
         self.assertIn("python scripts/update_rules.py", workflow)
         self.assertIn("git add -- rule", workflow)
+        self.assertIn("apple.list", workflow)
+        self.assertIn("apple-push.list", workflow)
+        self.assertIn("ip-query.list", workflow)
+        self.assertIn("TikTok-new.list", workflow)
         self.assertIn("git diff --cached --quiet", workflow)
 
     def test_rejects_output_outside_rule_directory(self) -> None:

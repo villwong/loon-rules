@@ -1,6 +1,6 @@
-# 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-03 12:43:06 UTC
-# 总规则数: 192
+# 自动合并 YouTube 与 YouTube Music 规则
+# 自动更新时间: 2026-09-21 14:26:20 UTC
+# 总规则数: 193
 
 DOMAIN-SUFFIX,ggpht.cn
 DOMAIN-SUFFIX,ggpht.com
@@ -192,5 +192,6 @@ USER-AGENT,com.google.ios.youtubemusic*
 IP-CIDR,172.110.32.0/21,no-resolve
 IP-CIDR,216.73.80.0/20,no-resolve
 IP-CIDR6,2620:120:e000::/40,no-resolve
+DOMAIN,music.youtube.com
 DOMAIN,yt3.googleusercontent.com
 DOMAIN-SUFFIX,ads.youtube.com

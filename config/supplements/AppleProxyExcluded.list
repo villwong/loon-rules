@@ -1,0 +1,10 @@
+# Ordinary App Store, CDN and certificate traffic must stay out of AppleProxy.
+DOMAIN,itunes.apple.com
+DOMAIN,lookup-api.apple.com
+DOMAIN,sandbox.itunes.apple.com
+DOMAIN-SUFFIX,apps.apple.com
+DOMAIN-SUFFIX,appsto.re
+DOMAIN-SUFFIX,cdn-apple.com
+DOMAIN-SUFFIX,digicert.com
+DOMAIN-SUFFIX,ocsp.apple.com
+USER-AGENT,com.apple.trustd*

@@ -94,6 +94,8 @@ class ServiceConfig:
     domain_only: bool = False
     collapse_domain_types: bool = False
     exclude_sources: tuple[SourceConfig, ...] = ()
+    include_services: tuple[str, ...] = ()
+    aliases: tuple[Path, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -642,6 +644,7 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
     services: list[ServiceConfig] = []
     seen_names: set[str] = set()
     seen_outputs: set[str] = set()
+    seen_aliases: set[str] = set()
 
     for service_index, raw_service in enumerate(raw_services):
         context = f"services[{service_index}]"
@@ -667,9 +670,9 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
         seen_names.add(name_key)
         seen_outputs.add(output_key)
 
-        raw_sources = raw_service.get("sources")
-        if not isinstance(raw_sources, list) or not raw_sources:
-            raise UpdateError(f"{context}.sources must be a non-empty list")
+        raw_sources = raw_service.get("sources", [])
+        if not isinstance(raw_sources, list):
+            raise UpdateError(f"{context}.sources must be a list")
         sources = tuple(
             _parse_source(source, f"{context}.sources[{source_index}]")
             for source_index, source in enumerate(raw_sources)
@@ -709,6 +712,44 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
                 seen_excludes.add(include_name)
                 exclude_includes.append(include_name)
 
+        raw_include_services = raw_service.get("include_services", [])
+        if not isinstance(raw_include_services, list) or not all(
+            isinstance(item, str) and item.strip() for item in raw_include_services
+        ):
+            raise UpdateError(
+                f"{context}.include_services must be a list of non-empty strings"
+            )
+        include_services = tuple(
+            dict.fromkeys(item.strip() for item in raw_include_services)
+        )
+        if not sources and not include_services:
+            raise UpdateError(
+                f"{context} must define at least one source or included service"
+            )
+
+        raw_aliases = raw_service.get("aliases", [])
+        if not isinstance(raw_aliases, list) or not all(
+            isinstance(item, str) and item.strip() for item in raw_aliases
+        ):
+            raise UpdateError(f"{context}.aliases must be a list of non-empty strings")
+        aliases: list[Path] = []
+        for item in raw_aliases:
+            alias = Path(item.strip())
+            alias_key = alias.as_posix().casefold()
+            if (
+                alias.is_absolute()
+                or ".." in alias.parts
+                or len(alias.parts) != 1
+                or alias.suffix != ".list"
+            ):
+                raise UpdateError(
+                    f"{context}.aliases entries must be root-level .list paths"
+                )
+            if alias_key in seen_outputs or alias_key in seen_aliases:
+                raise UpdateError(f"duplicate service alias: {alias.as_posix()}")
+            seen_aliases.add(alias_key)
+            aliases.append(alias)
+
         services.append(
             ServiceConfig(
                 name,
@@ -720,8 +761,22 @@ def load_config(path: Path) -> tuple[ServiceConfig, ...]:
                 _optional_bool(raw_service, "domain_only", context),
                 _optional_bool(raw_service, "collapse_domain_types", context),
                 exclude_sources,
+                include_services,
+                tuple(aliases),
             )
         )
+
+    names_by_key = {service.name.casefold(): service.name for service in services}
+    for service in services:
+        for included_name in service.include_services:
+            included_key = included_name.casefold()
+            if included_key not in names_by_key:
+                raise UpdateError(
+                    f"{service.name}.include_services references unknown service "
+                    f"{included_name!r}"
+                )
+            if included_key == service.name.casefold():
+                raise UpdateError(f"{service.name} cannot include itself")
 
     return tuple(services)
 
@@ -756,7 +811,12 @@ def prepare_services(
     fetcher: Callable[[str], str],
 ) -> tuple[PreparedService, ...]:
     """Download and validate every service before any file is written."""
-    prepared: list[PreparedService] = []
+    service_list = tuple(services)
+    services_by_key = {service.name.casefold(): service for service in service_list}
+    prepared_by_key: dict[str, PreparedService] = {}
+    base_rules_by_key: dict[str, tuple[str, ...]] = {}
+    counts_by_key: dict[str, tuple[tuple[str, int], ...]] = {}
+    excluded_by_key: dict[str, int] = {}
     download_cache: dict[str, str] = {}
     expansion_cache: dict[
         tuple[str, frozenset[str]], tuple[V2flyEntry, ...]
@@ -795,7 +855,7 @@ def prepare_services(
             )
         return rules
 
-    for service in services:
+    for service in service_list:
         merged: list[str] = []
         source_counts: list[tuple[str, int]] = []
 
@@ -815,20 +875,47 @@ def prepare_services(
         ]
         excluded_count = len(merged) - len(retained)
 
-        unique_rules = finalize_service_rules(service, retained)
+        key = service.name.casefold()
+        base_rules_by_key[key] = tuple(retained)
+        counts_by_key[key] = tuple(source_counts)
+        excluded_by_key[key] = excluded_count
+
+    def resolve_service(service: ServiceConfig, active: tuple[str, ...]) -> PreparedService:
+        key = service.name.casefold()
+        if key in prepared_by_key:
+            return prepared_by_key[key]
+        if key in active:
+            cycle_start = active.index(key)
+            cycle_keys = (*active[cycle_start:], key)
+            cycle = " -> ".join(services_by_key[item].name for item in cycle_keys)
+            raise UpdateError(f"circular included service dependency: {cycle}")
+
+        merged = list(base_rules_by_key[key])
+        source_counts = list(counts_by_key[key])
+        next_active = (*active, key)
+        for included_name in service.include_services:
+            included = services_by_key[included_name.casefold()]
+            prepared_child = resolve_service(included, next_active)
+            merged.extend(prepared_child.rules)
+            source_counts.append(
+                (f"included service {prepared_child.service.name}", len(prepared_child.rules))
+            )
+
+        unique_rules = finalize_service_rules(service, merged)
         if not unique_rules:
             raise UpdateError(f"{service.name} merged rule set is empty")
-        prepared.append(
-            PreparedService(
-                service=service,
-                output_path=resolve_output(repository_root, service.output),
-                rules=tuple(unique_rules),
-                source_counts=tuple(source_counts),
-                excluded_rules=excluded_count,
-            )
-        )
 
-    return tuple(prepared)
+        prepared = PreparedService(
+            service=service,
+            output_path=resolve_output(repository_root, service.output),
+            rules=tuple(unique_rules),
+            source_counts=tuple(source_counts),
+            excluded_rules=excluded_by_key[key],
+        )
+        prepared_by_key[key] = prepared
+        return prepared
+
+    return tuple(resolve_service(service, ()) for service in service_list)
 
 
 def build_output(
@@ -903,20 +990,50 @@ def update_all(
     changed: list[Path] = []
 
     for prepared in prepared_services:
-        path = prepared.output_path
-        if path.exists():
-            existing = path.read_text(encoding="utf-8-sig")
-            if is_current_output(existing, prepared.service, prepared.rules):
-                print(
-                    f"{prepared.service.name}: no rule changes "
-                    f"({len(prepared.rules)} rules)"
-                )
-                continue
-
-        write_atomic(
-            path,
-            build_output(prepared.service, prepared.rules, updated_at),
+        destinations = (
+            prepared.output_path,
+            *(
+                resolve_output(repository_root, alias)
+                for alias in prepared.service.aliases
+            ),
         )
+        changed_destinations: list[Path] = []
+        primary_existing: str | None = None
+        primary_is_current = False
+        if prepared.output_path.exists():
+            primary_payload = prepared.output_path.read_bytes()
+            primary_existing = primary_payload.decode("utf-8-sig")
+            primary_is_current = (
+                not primary_payload.startswith(b"\xef\xbb\xbf")
+                and b"\r" not in primary_payload
+                and is_current_output(
+                    primary_existing,
+                    prepared.service,
+                    prepared.rules,
+                )
+            )
+        content = (
+            primary_existing
+            if primary_is_current and primary_existing is not None
+            else build_output(prepared.service, prepared.rules, updated_at)
+        )
+
+        for index, path in enumerate(destinations):
+            if index == 0 and primary_is_current:
+                continue
+            if index > 0 and path.exists():
+                if path.read_bytes() == content.encode("utf-8"):
+                    continue
+            write_atomic(path, content)
+            changed_destinations.append(path)
+
+        if not changed_destinations:
+            print(
+                f"{prepared.service.name}: no rule changes "
+                f"({len(prepared.rules)} rules)"
+            )
+            continue
+
         counts = ", ".join(
             f"{name}={count}" for name, count in prepared.source_counts
         )
@@ -926,10 +1043,11 @@ def update_all(
             else ""
         )
         print(
-            f"{prepared.service.name}: updated {path} with "
+            f"{prepared.service.name}: updated "
+            f"{', '.join(str(path) for path in changed_destinations)} with "
             f"{len(prepared.rules)} rules ({counts}{boundary_note}, before dedup)"
         )
-        changed.append(path)
+        changed.extend(changed_destinations)
 
     if not changed:
         print("All configured rule files are already up to date")

@@ -1,0 +1,14 @@
+# 自动合并 Apple TV 与 Apple TV+ 规则
+# 自动更新时间: 2026-09-21 14:26:20 UTC
+# 总规则数: 10
+
+DOMAIN,hls-amt.itunes.apple.com
+DOMAIN,hls.itunes.apple.com
+DOMAIN,np-edge.itunes.apple.com
+DOMAIN,play-edge.itunes.apple.com
+DOMAIN,tv.applemusic.com
+DOMAIN,uts-api.itunes.apple.com
+DOMAIN-SUFFIX,tv.apple.com
+USER-AGENT,AppleTV*
+USER-AGENT,com.apple.tv*
+DOMAIN,apple-tv-plus-press.apple.com

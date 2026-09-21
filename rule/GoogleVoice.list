@@ -1,8 +1,10 @@
 # 自动合并自 Blackmatrix7 + Google 官方资料审核补充
-# 自动更新时间: 2026-09-20 18:22:29 UTC
-# 总规则数: 4
+# 自动更新时间: 2026-09-21 14:26:20 UTC
+# 总规则数: 6
 
 DOMAIN,lens.l.google.com
 DOMAIN,voice.google.com
 DOMAIN,lens.voice.google.com
 DOMAIN,siplink.telephony.goog
+DOMAIN,voice.telephony.goog
+DOMAIN-SUFFIX,telephony.goog

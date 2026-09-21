@@ -4,3 +4,5 @@
 DOMAIN,voice.google.com
 DOMAIN,lens.voice.google.com
 DOMAIN,siplink.telephony.goog
+DOMAIN,voice.telephony.goog
+DOMAIN-SUFFIX,telephony.goog
