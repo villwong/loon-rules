@@ -1,6 +1,6 @@
 # OpenAI、Anthropic 与 Gemini 聚合规则
-# 自动更新时间: 2026-09-21 14:26:20 UTC
-# 总规则数: 104
+# 自动更新时间: 2026-09-29 21:48:01 UTC
+# 总规则数: 107
 
 DOMAIN,browser-intake-datadoghq.com
 DOMAIN,chat.openai.com.cdn.cloudflare.net
@@ -81,11 +81,14 @@ DOMAIN-SUFFIX,ai.studio
 DOMAIN-SUFFIX,aistudio.google.com
 DOMAIN-SUFFIX,gemini.google
 DOMAIN-SUFFIX,gemini.gstatic.com
+DOMAIN,geminiweb-pa.clients.google.com
+DOMAIN,geminiweb-pa.clients6.google.com
 DOMAIN,cloudaicompanion.googleapis.com
 DOMAIN,cloudcode-pa.googleapis.com
 DOMAIN,daily-cloudcode-pa.googleapis.com
 DOMAIN,notebooklm-pa.googleapis.com
 DOMAIN,notebooklm.googleapis.com
+DOMAIN-SUFFIX,labstailwind.pa.googleapis.com
 DOMAIN-SUFFIX,notebook.google
 DOMAIN-SUFFIX,notebook.google.com
 DOMAIN-SUFFIX,notebooklm.google
