@@ -1,6 +1,6 @@
 # OpenAI、Anthropic 与 Gemini 聚合规则
-# 自动更新时间: 2026-09-29 21:48:01 UTC
-# 总规则数: 107
+# 自动更新时间: 2026-10-02 11:48:51 UTC
+# 总规则数: 108
 
 DOMAIN,browser-intake-datadoghq.com
 DOMAIN,chat.openai.com.cdn.cloudflare.net
@@ -54,6 +54,7 @@ DOMAIN-SUFFIX,claude.ai
 DOMAIN,cdn.usefathom.com
 DOMAIN-SUFFIX,clau.de
 DOMAIN-SUFFIX,claude.com
+DOMAIN-SUFFIX,claude.dev
 DOMAIN-SUFFIX,claudemcpclient.com
 DOMAIN-SUFFIX,claudemcpcontent.com
 DOMAIN-SUFFIX,claudeusercontent.com

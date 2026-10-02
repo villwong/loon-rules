@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-21 14:29:43 UTC
-# 总规则数: 9
+# 自动更新时间: 2026-10-02 11:48:51 UTC
+# 总规则数: 10
 
 DOMAIN,servd-anthropic-website.b-cdn.net
 DOMAIN-SUFFIX,anthropic.com
@@ -8,6 +8,7 @@ DOMAIN-SUFFIX,claude.ai
 DOMAIN,cdn.usefathom.com
 DOMAIN-SUFFIX,clau.de
 DOMAIN-SUFFIX,claude.com
+DOMAIN-SUFFIX,claude.dev
 DOMAIN-SUFFIX,claudemcpclient.com
 DOMAIN-SUFFIX,claudemcpcontent.com
 DOMAIN-SUFFIX,claudeusercontent.com
