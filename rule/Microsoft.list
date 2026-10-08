@@ -1,6 +1,6 @@
 # Microsoft 全生态规则，包含 GitHub 子表
-# 自动更新时间: 2026-09-21 14:26:20 UTC
-# 总规则数: 868
+# 自动更新时间: 2026-10-08 12:44:18 UTC
+# 总规则数: 869
 
 DOMAIN,vsmarketplacebadge.apphb.com
 DOMAIN-SUFFIX,1drv.ms
@@ -762,6 +762,7 @@ DOMAIN,github-production-repository-file-5c1aeb.s3.amazonaws.com
 DOMAIN,github-production-repository-image-32fea6.s3.amazonaws.com
 DOMAIN,github-production-upload-manifest-file-7fdce7.s3.amazonaws.com
 DOMAIN,github-production-user-asset-6210df.s3.amazonaws.com
+DOMAIN-SUFFIX,cafe.github.com
 DOMAIN-SUFFIX,collector.github.com
 DOMAIN-SUFFIX,vscodeedu.app
 DOMAIN-SUFFIX,vscodeedu.com

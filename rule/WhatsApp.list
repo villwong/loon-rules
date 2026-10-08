@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-20 17:50:37 UTC
-# 总规则数: 39
+# 自动更新时间: 2026-10-08 12:44:18 UTC
+# 总规则数: 37
 
 DOMAIN,graph.facebook.com
 DOMAIN-SUFFIX,bintray.com
@@ -39,5 +39,3 @@ DOMAIN-SUFFIX,whatsapp.info
 DOMAIN-SUFFIX,whatsapp.org
 DOMAIN-SUFFIX,whatsapp.tv
 DOMAIN-SUFFIX,whatsappbrand.com
-DOMAIN-SUFFIX,graph.whatsapp.com
-DOMAIN-SUFFIX,graph.whatsapp.net

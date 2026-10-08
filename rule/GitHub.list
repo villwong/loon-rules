@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-21 14:29:43 UTC
-# 总规则数: 68
+# 自动更新时间: 2026-10-08 12:44:18 UTC
+# 总规则数: 69
 
 DOMAIN-SUFFIX,atom.io
 DOMAIN-SUFFIX,dependabot.com
@@ -69,4 +69,5 @@ DOMAIN,productionresultssa16.blob.core.windows.net
 DOMAIN,productionresultssa17.blob.core.windows.net
 DOMAIN,productionresultssa18.blob.core.windows.net
 DOMAIN,productionresultssa19.blob.core.windows.net
+DOMAIN-SUFFIX,cafe.github.com
 DOMAIN-SUFFIX,collector.github.com
