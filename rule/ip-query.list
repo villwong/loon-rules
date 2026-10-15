@@ -1,6 +1,6 @@
 # 自动合并 v2fly IP 地理检测分类 + 本地严格审核补充
-# 自动更新时间: 2026-09-20 18:14:45 UTC
-# 总规则数: 252
+# 自动更新时间: 2026-10-15 10:47:40 UTC
+# 总规则数: 253
 
 DOMAIN-SUFFIX,2ip.io
 DOMAIN-SUFFIX,2ip.ru
@@ -15,6 +15,7 @@ DOMAIN-SUFFIX,bgp.he.net
 DOMAIN-SUFFIX,bgp.tools
 DOMAIN-SUFFIX,bigdatacloud.net
 DOMAIN-SUFFIX,browserleaks.com
+DOMAIN-SUFFIX,bulkgeoip.com
 DOMAIN-SUFFIX,check-host.net
 DOMAIN,checkip.amazonaws.com
 DOMAIN-SUFFIX,checkip.com.vn
