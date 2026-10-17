@@ -1,7 +1,20 @@
 # Muse 与 Meta AI 专用规则，自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-10-17 18:51:16 UTC
-# 总规则数: 3
+# 自动更新时间: 2026-10-17 19:02:29 UTC
+# 总规则数: 16
 
+DOMAIN,accountscenter.meta.com
+DOMAIN,auth.meta.com
+DOMAIN-SUFFIX,ecto1usercontent.com
+DOMAIN-SUFFIX,hatch.club
+DOMAIN-SUFFIX,hatch.ecto1.ai
+DOMAIN,lookaside.facebook.com
+DOMAIN-SUFFIX,meta-agents-apps.workers.dev
 DOMAIN-SUFFIX,meta.ai
+DOMAIN,meta.graph.meta.com
+DOMAIN-SUFFIX,metaaiusercontent.com
 DOMAIN-SUFFIX,metaaivm.com
 DOMAIN-SUFFIX,muse.ai
+DOMAIN-SUFFIX,museai.com
+DOMAIN,nest-static.fbcdn.net
+DOMAIN,shortwave.facebook.com
+DOMAIN,static.xx.fbcdn.net

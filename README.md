@@ -43,11 +43,11 @@ Apple 子规则都包含在 `Apple.list` 中。`AppleProxy.list` 可以与 Apple
 | [`AI.list`](rule/AI.list) | OpenAI、Anthropic、Gemini 与 Muse/Meta AI 聚合规则 |
 | [`OpenAI.list`](rule/OpenAI.list) | OpenAI 与 ChatGPT |
 | [`Anthropic.list`](rule/Anthropic.list) | Anthropic 与 Claude |
-| [`MuseAI.list`](rule/MuseAI.list) | Meta 的 Muse、Meta AI 与专用虚拟机域名 |
+| [`MuseAI.list`](rule/MuseAI.list) | Meta 的 Muse、Meta AI、虚拟机、内容预览与经核实的登录/客户端依赖 |
 
 `Gemini.list` 同时属于 Google 和 AI，因此也包含在 `AI.list` 中。
 
-`MuseAI.list` 从 v2fly Meta 分类和 BlackMatrix7 Global 域名表中提取 `muse.ai`、`meta.ai`、`metaaivm.com` 及其子域，合并去重后也包含在 `AI.list` 中。单独分流时放在 `AI.list` 前面。
+`MuseAI.list` 合并两个上游的专用域名与 `config/supplements/MuseAI.list` 中经官方前端、CSP、启动脚本和客户端静态资料核实的补充项，也包含在 `AI.list` 中。单独分流时放在 `AI.list` 前面。登录、语音和下载使用的少量共享 Meta 主机按精确域名收录；Facebook/Instagram 整站及通用 CDN 父域不在子表中，第三方账号登录仍需相应平台规则配合。
 
 ### 社交与通信
 

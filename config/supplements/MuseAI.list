@@ -1,0 +1,33 @@
+# Audited 2026-10-18. Keep shared dependencies limited to explicit hosts.
+# Public Muse production origins and voice alias:
+# https://muse.ai/_next/static/chunks/1o54q-v3qwf0s.js
+DOMAIN-SUFFIX,museai.com
+DOMAIN-SUFFIX,hatch.ecto1.ai
+DOMAIN-SUFFIX,hatch.club
+
+# Muse's current Content-Security-Policy names these generated-content hosts.
+# https://muse.ai/
+DOMAIN-SUFFIX,metaaiusercontent.com
+DOMAIN-SUFFIX,ecto1usercontent.com
+DOMAIN-SUFFIX,meta-agents-apps.workers.dev
+
+# Official web OIDC and explicit static-asset dependency, also used by other Meta services:
+# https://muse.ai/_next/static/chunks/3bac_x841c6en.js
+# https://muse.ai/_next/static/chunks/0blqw8ajecl7o.js
+DOMAIN,auth.meta.com
+DOMAIN,nest-static.fbcdn.net
+
+# Meta's public login page loads scripts from this exact shared CDN host.
+# https://auth.meta.com/
+DOMAIN,static.xx.fbcdn.net
+
+# Official Muse Code launcher pins binary downloads to this shared host.
+# https://api.meta.ai/muse-launcher.sh
+DOMAIN,lookaside.facebook.com
+
+# Client-specific native endpoints recorded in the macOS 6.0 static inventory:
+# https://github.com/mahdi-salmanzade/meta-muse-teardown/blob/main/evidence-updates/2026-10-08/05-api-inventory-macos.txt
+# These are code references, not a claim of observed requests in every session.
+DOMAIN,meta.graph.meta.com
+DOMAIN,accountscenter.meta.com
+DOMAIN,shortwave.facebook.com

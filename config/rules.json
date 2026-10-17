@@ -725,6 +725,12 @@
             "meta.ai",
             "metaaivm.com"
           ]
+        },
+        {
+          "name": "Audited Muse web and native dependencies",
+          "path": "config/supplements/MuseAI.list",
+          "format": "local-loon-list",
+          "min_rules": 13
         }
       ]
     },

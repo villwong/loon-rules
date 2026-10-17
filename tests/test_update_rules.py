@@ -985,6 +985,11 @@ class RuleUpdaterTests(unittest.TestCase):
     def test_muse_merges_scoped_upstreams_into_ai_without_domain_leaks(self) -> None:
         config = json.loads(updater.DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
         muse = next(service for service in config["services"] if service["name"] == "MuseAI")
+        # Exercise the two remote sources separately from the audited local supplement.
+        muse = {**muse, "sources": [
+            source for source in muse["sources"]
+            if source["format"] != "local-loon-list"
+        ]}
         expected_roots = {"muse.ai", "meta.ai", "metaaivm.com"}
         self.assertEqual(
             {source["format"] for source in muse["sources"]},
@@ -1050,6 +1055,59 @@ class RuleUpdaterTests(unittest.TestCase):
                 updater.update_all(config_path, root, fetcher=responses.__getitem__)
             for path, original in contents.items():
                 self.assertEqual(path.read_bytes(), original)
+
+    def test_muse_covers_audited_dependencies_without_catching_entire_platforms(self) -> None:
+        services = updater.load_config(updater.DEFAULT_CONFIG_PATH)
+        muse = next(service for service in services if service.name == "MuseAI")
+        supplement = next(
+            source for source in muse.sources
+            if source.format_name == "local-loon-list"
+        )
+        self.assertEqual(supplement.local_path, Path("config/supplements/MuseAI.list"))
+        rules = {
+            line.strip()
+            for line in (updater.REPOSITORY_ROOT / muse.output)
+            .read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith("#")
+        }
+
+        def matches(host: str) -> bool:
+            for rule in rules:
+                fields = rule.split(",")
+                if fields[0] == "DOMAIN" and host == fields[1]:
+                    return True
+                if fields[0] == "DOMAIN-SUFFIX" and (
+                    host == fields[1] or host.endswith("." + fields[1])
+                ):
+                    return True
+            return False
+
+        for host in (
+            "auth.muse.ai", "api.muse.ai", "api.meta.ai", "dev.meta.ai",
+            "hatch.metaaivm.com", "tenant.metaaivm.com",
+            "production.museai.com", "voice.museai.com",
+            "hatch.ecto1.ai", "www.hatch.club", "auth.meta.com",
+            "meta.graph.meta.com", "accountscenter.meta.com",
+            "shortwave.facebook.com", "nest-static.fbcdn.net",
+            "static.xx.fbcdn.net", "lookaside.facebook.com",
+            "image.h.metaaiusercontent.com", "app.s.metaaiusercontent.com",
+            "file.cf.ecto1usercontent.com", "app.meta-agents-apps.workers.dev",
+        ):
+            with self.subTest(covered=host):
+                self.assertTrue(matches(host))
+        for host in (
+            "www.facebook.com", "www.instagram.com", "www.meta.com", "fbcdn.net",
+            "unrelated.fbcdn.net", "unrelated.workers.dev", "skiv.com",
+            "voice.museai.com.evil.test", "evilmuse.ai", "node.hatch.one",
+            "internal.ecto1.ai", "www.multimango.com",
+        ):
+            with self.subTest(excluded=host):
+                self.assertFalse(matches(host))
+        supplement_rules = set(updater.parse_source(
+            supplement,
+            (updater.REPOSITORY_ROOT / supplement.local_path).read_text(encoding="utf-8"),
+        ))
+        self.assertLessEqual(supplement_rules, rules)
 
     def test_source_domain_scope_rejects_ambiguous_or_invalid_roots(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
