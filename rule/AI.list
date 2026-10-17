@@ -1,6 +1,6 @@
-# OpenAI、Anthropic 与 Gemini 聚合规则
-# 自动更新时间: 2026-10-17 14:53:03 UTC
-# 总规则数: 109
+# OpenAI、Anthropic、Gemini 与 Muse/Meta AI 聚合规则
+# 自动更新时间: 2026-10-17 18:51:16 UTC
+# 总规则数: 112
 
 DOMAIN,browser-intake-datadoghq.com
 DOMAIN,chat.openai.com.cdn.cloudflare.net
@@ -111,3 +111,6 @@ DOMAIN,antigravity.googleapis.com
 DOMAIN-SUFFIX,antigravity.google
 DOMAIN-SUFFIX,antigravity-unleash.goog
 DOMAIN-SUFFIX,stitch.withgoogle.com
+DOMAIN-SUFFIX,meta.ai
+DOMAIN-SUFFIX,metaaivm.com
+DOMAIN-SUFFIX,muse.ai

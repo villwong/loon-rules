@@ -40,11 +40,14 @@ Apple 子规则都包含在 `Apple.list` 中。`AppleProxy.list` 可以与 Apple
 
 | 文件 | 内容 |
 | --- | --- |
-| [`AI.list`](rule/AI.list) | OpenAI、Anthropic 与 Gemini 聚合规则 |
+| [`AI.list`](rule/AI.list) | OpenAI、Anthropic、Gemini 与 Muse/Meta AI 聚合规则 |
 | [`OpenAI.list`](rule/OpenAI.list) | OpenAI 与 ChatGPT |
 | [`Anthropic.list`](rule/Anthropic.list) | Anthropic 与 Claude |
+| [`MuseAI.list`](rule/MuseAI.list) | Meta 的 Muse、Meta AI 与专用虚拟机域名 |
 
 `Gemini.list` 同时属于 Google 和 AI，因此也包含在 `AI.list` 中。
+
+`MuseAI.list` 从 v2fly Meta 分类和 BlackMatrix7 Global 域名表中提取 `muse.ai`、`meta.ai`、`metaaivm.com` 及其子域，合并去重后也包含在 `AI.list` 中。单独分流时放在 `AI.list` 前面。
 
 ### 社交与通信
 

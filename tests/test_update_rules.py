@@ -979,7 +979,107 @@ class RuleUpdaterTests(unittest.TestCase):
         self.assertNotIn("ChatGPT", services_by_name)
         self.assertEqual(
             services_by_name["AI"].include_services,
-            ("OpenAI", "Anthropic", "Gemini"),
+            ("OpenAI", "Anthropic", "Gemini", "MuseAI"),
+        )
+
+    def test_muse_merges_scoped_upstreams_into_ai_without_domain_leaks(self) -> None:
+        config = json.loads(updater.DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))
+        muse = next(service for service in config["services"] if service["name"] == "MuseAI")
+        expected_roots = {"muse.ai", "meta.ai", "metaaivm.com"}
+        self.assertEqual(
+            {source["format"] for source in muse["sources"]},
+            {"v2fly-domain-list", "loon-domain-set"},
+        )
+        for source in muse["sources"]:
+            self.assertEqual(set(source["include_domains"]), expected_roots)
+        v2fly_url, blackmatrix_url = (source["url"] for source in muse["sources"])
+        self.assertTrue(v2fly_url.endswith("/data/meta"))
+        self.assertTrue(blackmatrix_url.endswith("/Global/Global_Domain.list"))
+        responses = {
+            v2fly_url: (
+                "include:facebook\nmeta.ai\nmetaaivm.com\nmuse.ai\n"
+                "full:api.muse.ai @cn\nmeta.com\nllama.com\n"
+            ),
+            updater.resolve_v2fly_include_url(v2fly_url, "facebook"): (
+                "facebook.com\nfull:graph.facebook.com\n"
+            ),
+            blackmatrix_url: (
+                ".meta.ai\n.metaaivm.com\n.muse.ai\napi.meta.ai\nmeta.ai\n"
+                ".evilmeta.ai\n.meta.ai.evil.test\n.skiv.com\n.facebook.com\n"
+            ),
+        }
+        expected_rules = {
+            "DOMAIN-SUFFIX,meta.ai",
+            "DOMAIN-SUFFIX,metaaivm.com",
+            "DOMAIN-SUFFIX,muse.ai",
+            "DOMAIN,api.muse.ai",
+            "DOMAIN,api.meta.ai",
+            "DOMAIN,meta.ai",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = root / "rules.json"
+            config_path.write_text(
+                json.dumps({"services": [muse, {
+                    "name": "AI",
+                    "output": "rule/AI.list",
+                    "header": "AI",
+                    "include_services": ["MuseAI"],
+                    "sources": [],
+                }]}),
+                encoding="utf-8",
+            )
+            updater.update_all(config_path, root, fetcher=responses.__getitem__)
+            contents = {}
+            for name in ("MuseAI", "AI"):
+                path = root / "rule" / f"{name}.list"
+                contents[path] = path.read_bytes()
+                actual = {
+                    line for line in path.read_text(encoding="utf-8").splitlines()
+                    if line and not line.startswith("#")
+                }
+                self.assertEqual(actual, expected_rules)
+            self.assertEqual(
+                updater.update_all(config_path, root, fetcher=responses.__getitem__),
+                (),
+            )
+            responses[blackmatrix_url] = (
+                ".meta.ai\n.muse.ai\n.google.com\n.metaaivm.com.evil.test\n"
+            )
+            with self.assertRaisesRegex(updater.UpdateError, "yielded only 2 rules"):
+                updater.update_all(config_path, root, fetcher=responses.__getitem__)
+            for path, original in contents.items():
+                self.assertEqual(path.read_bytes(), original)
+
+    def test_source_domain_scope_rejects_ambiguous_or_invalid_roots(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "rules.json"
+            for value in (
+                "meta.ai", ["*.meta.ai"], ["meta.ai/path"], ["ai"], [""], [None],
+            ):
+                with self.subTest(include_domains=value):
+                    service = service_config(
+                        "Scoped", "rule/Scoped.list", "https://example.test/source", "loon-list"
+                    )
+                    service["sources"][0]["include_domains"] = value
+                    config_path.write_text(
+                        json.dumps({"services": [service]}), encoding="utf-8"
+                    )
+                    with self.assertRaisesRegex(updater.UpdateError, "include_domains"):
+                        updater.load_config(config_path)
+
+        source = updater.SourceConfig(
+            "Scoped", "https://example.test/source", "loon-list", 1,
+            include_domains=("meta.ai",),
+        )
+        self.assertEqual(
+            updater.filter_source_domains(source, [
+                "DOMAIN,API.META.AI", "DOMAIN-SUFFIX,meta.ai", "DOMAIN-SUFFIX,ai",
+                "DOMAIN-KEYWORD,meta.ai", "USER-AGENT,*meta.ai*",
+                "IP-CIDR,192.0.2.0/24,no-resolve", "DOMAIN-SUFFIX,evilmeta.ai",
+                "DOMAIN,meta.ai.evil.test",
+            ]),
+            ["DOMAIN,api.meta.ai", "DOMAIN-SUFFIX,meta.ai"],
         )
 
     def test_repository_config_defines_only_dedicated_requested_sources(self) -> None:
@@ -1295,6 +1395,11 @@ class RuleUpdaterTests(unittest.TestCase):
                 "DOMAIN-SUFFIX,voice.google.com",
                 "DOMAIN,siplink.telephony.goog",
             },
+            "MuseAI": {
+                "DOMAIN-SUFFIX,muse.ai",
+                "DOMAIN-SUFFIX,meta.ai",
+                "DOMAIN-SUFFIX,metaaivm.com",
+            },
             "WhatsApp": {"DOMAIN-SUFFIX,whatsapp.com"},
             "Bybit": {"DOMAIN-SUFFIX,bybit.com"},
             "Wise": {
@@ -1474,7 +1579,7 @@ class RuleUpdaterTests(unittest.TestCase):
             for path in (updater.REPOSITORY_ROOT / "rule").glob("*.list")
         }
 
-        self.assertEqual(len(services), 36)
+        self.assertEqual(len(services), 37)
         self.assertEqual(configured, generated)
         self.assertTrue(
             all((updater.REPOSITORY_ROOT / output).is_file() for output in configured)

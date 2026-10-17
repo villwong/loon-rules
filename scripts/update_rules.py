@@ -81,6 +81,7 @@ class SourceConfig:
     min_rules: int
     include_types: tuple[str, ...] = ()
     local_path: Path | None = None
+    include_domains: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -489,6 +490,25 @@ def normalize_domain(value: str, require_dot: bool = False) -> str | None:
     return domain
 
 
+def filter_source_domains(source: SourceConfig, rules: Iterable[str]) -> list[str]:
+    """Select reviewed domain trees from a broader upstream category."""
+    if not source.include_domains:
+        return list(rules)
+
+    selected: list[str] = []
+    for rule in rules:
+        fields = rule_key(rule)
+        if len(fields) != 2 or fields[0] not in {"DOMAIN", "DOMAIN-SUFFIX"}:
+            continue
+        domain = normalize_domain(fields[1], require_dot=True)
+        if domain is not None and any(
+            domain == root or domain.endswith("." + root)
+            for root in source.include_domains
+        ):
+            selected.append(f"{fields[0]},{domain}")
+    return selected
+
+
 def filter_service_rules(
     service: ServiceConfig,
     rules: Iterable[str],
@@ -598,6 +618,21 @@ def _parse_source(data: Any, context: str) -> SourceConfig:
             f"{sorted(unsupported_types)}"
         )
 
+    raw_domains = data.get("include_domains", [])
+    if not isinstance(raw_domains, list):
+        raise UpdateError(f"{context}.include_domains must be a list of domain names")
+    domains: list[str] = []
+    for item in raw_domains:
+        domain = (
+            normalize_domain(item, require_dot=True) if isinstance(item, str) else None
+        )
+        if domain is None:
+            raise UpdateError(
+                f"{context}.include_domains contains an invalid domain name: {item!r}"
+            )
+        if domain not in domains:
+            domains.append(domain)
+
     local_path: Path | None = None
     if format_name == "local-loon-list":
         path_text = _required_string(data, "path", context)
@@ -625,6 +660,7 @@ def _parse_source(data: Any, context: str) -> SourceConfig:
         min_rules,
         include_types,
         local_path,
+        tuple(domains),
     )
 
 
@@ -847,6 +883,7 @@ def prepare_services(
                 download_cache[source.url] = fetcher(source.url)
             rules = parse_source(source, download_cache[source.url])
 
+        rules = filter_source_domains(source, rules)
         rules = filter_service_rules(service, rules)
         if len(rules) < source.min_rules:
             raise UpdateError(

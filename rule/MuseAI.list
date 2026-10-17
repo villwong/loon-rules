@@ -1,0 +1,7 @@
+# Muse 与 Meta AI 专用规则，自动合并自 v2fly + Blackmatrix7
+# 自动更新时间: 2026-10-17 18:51:16 UTC
+# 总规则数: 3
+
+DOMAIN-SUFFIX,meta.ai
+DOMAIN-SUFFIX,metaaivm.com
+DOMAIN-SUFFIX,muse.ai

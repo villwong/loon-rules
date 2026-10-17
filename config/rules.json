@@ -689,13 +689,44 @@
     {
       "name": "AI",
       "output": "rule/AI.list",
-      "header": "OpenAI、Anthropic 与 Gemini 聚合规则",
+      "header": "OpenAI、Anthropic、Gemini 与 Muse/Meta AI 聚合规则",
       "include_services": [
         "OpenAI",
         "Anthropic",
-        "Gemini"
+        "Gemini",
+        "MuseAI"
       ],
       "sources": []
+    },
+    {
+      "name": "MuseAI",
+      "output": "rule/MuseAI.list",
+      "header": "Muse 与 Meta AI 专用规则，自动合并自 v2fly + Blackmatrix7",
+      "sort_rules": true,
+      "sources": [
+        {
+          "name": "v2fly Meta AI domains",
+          "url": "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/meta",
+          "format": "v2fly-domain-list",
+          "min_rules": 3,
+          "include_domains": [
+            "muse.ai",
+            "meta.ai",
+            "metaaivm.com"
+          ]
+        },
+        {
+          "name": "Blackmatrix7 Global AI domains",
+          "url": "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Global/Global_Domain.list",
+          "format": "loon-domain-set",
+          "min_rules": 3,
+          "include_domains": [
+            "muse.ai",
+            "meta.ai",
+            "metaaivm.com"
+          ]
+        }
+      ]
     },
     {
       "name": "WhatsApp",
