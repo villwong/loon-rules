@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-09-20 17:51:35 UTC
-# 总规则数: 46
+# 自动更新时间: 2026-10-17 14:53:03 UTC
+# 总规则数: 47
 
 DOMAIN,browser-intake-datadoghq.com
 DOMAIN,chat.openai.com.cdn.cloudflare.net
@@ -41,6 +41,7 @@ DOMAIN-SUFFIX,chat.com
 DOMAIN-SUFFIX,chatgpt.site
 DOMAIN-SUFFIX,crixet.com
 DOMAIN-SUFFIX,oaistatsig.com
+DOMAIN-SUFFIX,openai.org
 DOMAIN-SUFFIX,sora.com
 DOMAIN-SUFFIX,openai.com.cdn.cloudflare.net
 DOMAIN,openaiapi-site.azureedge.net
