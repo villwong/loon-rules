@@ -1,6 +1,6 @@
 # Microsoft 全生态规则，包含 GitHub 子表
-# 自动更新时间: 2026-10-08 12:44:18 UTC
-# 总规则数: 869
+# 自动更新时间: 2026-10-18 15:18:53 UTC
+# 总规则数: 867
 
 DOMAIN,vsmarketplacebadge.apphb.com
 DOMAIN-SUFFIX,1drv.ms
@@ -770,8 +770,6 @@ DOMAIN,download.visualstudio.microsoft.com
 DOMAIN,rink.hockeyapp.net
 DOMAIN-SUFFIX,browser.events.data.msn.cn
 DOMAIN-SUFFIX,browser.events.data.msn.com
-DOMAIN-SUFFIX,asobostudio.com
-DOMAIN-SUFFIX,flightsimulator.com
 DOMAIN-SUFFIX,forza.net
 DOMAIN-SUFFIX,minecraft-services.net
 DOMAIN-SUFFIX,minecraftservices.com
