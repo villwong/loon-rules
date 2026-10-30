@@ -1,6 +1,6 @@
 # Microsoft 全生态规则，包含 GitHub 子表
-# 自动更新时间: 2026-10-26 12:10:52 UTC
-# 总规则数: 874
+# 自动更新时间: 2026-10-30 21:54:32 UTC
+# 总规则数: 876
 
 DOMAIN,vsmarketplacebadge.apphb.com
 DOMAIN-SUFFIX,1drv.ms
@@ -716,6 +716,7 @@ DOMAIN-SUFFIX,azure-dns-8.cn
 DOMAIN-SUFFIX,azure-dns-9.cn
 DOMAIN-SUFFIX,azure-dns-10.cn
 DOMAIN-SUFFIX,bingparachute.com
+DOMAIN-SUFFIX,bingstatic.com
 DOMAIN-SUFFIX,copilot-stg.com
 DOMAIN-SUFFIX,copilot.com
 DOMAIN-SUFFIX,cn.bing.com
@@ -782,6 +783,7 @@ DOMAIN-SUFFIX,xbox
 DOMAIN-SUFFIX,data.microsoft.com
 DOMAIN-SUFFIX,l-msedge.net
 DOMAIN-SUFFIX,msftncsi.com
+DOMAIN-SUFFIX,msftstatic.com
 DOMAIN-SUFFIX,mshome.net
 DOMAIN-SUFFIX,s-dc-msedge.net
 DOMAIN-SUFFIX,spo-msedge.net
