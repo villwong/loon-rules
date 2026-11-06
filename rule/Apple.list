@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-10-27 11:32:30 UTC
-# 总规则数: 1922
+# 自动更新时间: 2026-11-06 13:41:00 UTC
+# 总规则数: 1923
 
 DOMAIN-KEYWORD,apple-support.akadns.net
 DOMAIN-KEYWORD,apple.com.akadns.net
@@ -1675,6 +1675,7 @@ DOMAIN,pd.itunes.apple.com
 DOMAIN,play-edge.itunes.apple.com
 DOMAIN,play.itunes.apple.com
 DOMAIN,podcasts.itunes.apple.com
+DOMAIN,radio.itunes.apple.com
 DOMAIN,se-edge.itunes.apple.com
 DOMAIN,se2.itunes.apple.com
 DOMAIN,search.itunes.apple.com
