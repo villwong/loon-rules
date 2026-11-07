@@ -1,6 +1,6 @@
 # 自动合并自 v2fly + Blackmatrix7
-# 自动更新时间: 2026-10-08 12:44:18 UTC
-# 总规则数: 69
+# 自动更新时间: 2026-11-07 21:23:33 UTC
+# 总规则数: 70
 
 DOMAIN-SUFFIX,atom.io
 DOMAIN-SUFFIX,dependabot.com
@@ -33,6 +33,7 @@ DOMAIN-SUFFIX,rawgithub.com
 DOMAIN-SUFFIX,repo.new
 DOMAIN-SUFFIX,thegithubshop.com
 DOMAIN-KEYWORD,github
+DOMAIN,production-copilot-host-westus.webpubsub.azure.com
 DOMAIN,copilotprodattachments.blob.core.windows.net
 DOMAIN,copilot-telemetry-service.githubusercontent.com
 DOMAIN,copilot-telemetry.githubusercontent.com
