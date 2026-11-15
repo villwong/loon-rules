@@ -1,5 +1,5 @@
 # Microsoft 全生态规则，包含 GitHub 子表
-# 自动更新时间: 2026-11-07 21:23:33 UTC
+# 自动更新时间: 2026-11-15 22:26:22 UTC
 # 总规则数: 877
 
 DOMAIN,vsmarketplacebadge.apphb.com
@@ -774,6 +774,7 @@ DOMAIN,dc.services.visualstudio.com
 DOMAIN,download.visualstudio.microsoft.com
 DOMAIN,rink.hockeyapp.net
 DOMAIN,rt.services.visualstudio.com
+DOMAIN,vscode.download.prss.microsoft.com
 DOMAIN-SUFFIX,browser.events.data.msn.cn
 DOMAIN-SUFFIX,browser.events.data.msn.com
 DOMAIN-SUFFIX,forza.net
@@ -848,7 +849,6 @@ DOMAIN,surface.download.prss.microsoft.com
 DOMAIN,surface.downloads.prss.microsoft.com
 DOMAIN,vlportal.download.prss.microsoft.com
 DOMAIN,volic.download.prss.microsoft.com
-DOMAIN,vscode.download.prss.microsoft.com
 DOMAIN,vz.download.prss.microsoft.com
 DOMAIN,windbg.download.prss.microsoft.com
 DOMAIN-SUFFIX,github-atom-io-herokuapp-com.freetls.fastly.net
